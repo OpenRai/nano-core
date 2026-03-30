@@ -9,19 +9,19 @@
 
 ---
 
-Historically, Nano developers have faced a fragmented integration landscape: ranging from heavyweight enterprise backends (`nano-wallet-js`) to lightweight frontend-only implementations (`libnemo` & `@nano/wallet`), often suffering from rigid vendor lock-in or fragile PoW architecture. 
+Historically, Nano developers have faced a fragmented integration landscape: ranging from "heavy, enterprise:y" backends to lightweight "frontend-only" implementation, suffering either from rigid vendor lock-in or fragile PoW architecture.
 
-**`@openrai/nano-core`** extracts the most robust cryptographic, domain-driven design, and network-fallback primitives into a single, highly extensible foundation. It solves the hardest protocol challenges—such as block synchronization and isomorphic compute constraints—allowing developers to focus on application logic.
+**`@openrai/nano-core`** extracts the most robust cryptographic, domain-driven design, and network-fallback primitives into a single, highly extensible foundation. It solves the hardest protocol challenges - such as block synchronization and different constraint between browser & backend environments - allowing developers to focus on application logic.
 
 ---
 
 ## 🚀 Key Features
 
-* **The "Frontier Dilemma" Solved:** Nano is a state-based block-lattice where each block depends strictly on the exact final state of the previous frontier. `@openrai/nano-core` provides internal concurrent Mutex queuing to perfectly sequentialize blocks even under heavy asynchronous loads, eliminating "Fork" or "Gap" errors.
-* **Isomorphic Proof-of-Work (JIT Profiling):** Wraps `nano-pow-with-fallback` in a Just-In-Time (JIT) environment profiler via `WorkProvider.auto()`. Whether running on an Apple Silicon Node.js server (jumping straight to local WebGPU) or on an aging mobile browser (delegating safely to remote circuit-breakers), generation is dynamically optimized without UI blocking.
-* **Primitive-Obsession Eradicated:** Heavily-typed, precision-safe wrappers for `NanoAmount` and `NanoAddress` entirely eliminate the "Stringly-Typed Money" anti-pattern.
+* **Bypassing the "Frontier Dilemma":** Nano is a state-based block-lattice where each block depends strictly on the exact final state of the previous frontier. This strong design choise is one of the main reasons why Nano can be feeless and energy efficient, but it often becomes a stumbling block for integrations. `@openrai/nano-core` provides internal concurrent Mutex queuing to perfectly sequentialize blocks even under heavy asynchronous loads, eliminating "Fork" or "Gap" errors.
+* **Isomorphic Proof-of-Work (JIT Profiling):** Wraps `nano-pow-with-fallback` in a Just-In-Time (JIT) environment profiler via `WorkProvider.auto()`. What it means is that whether running on an Apple Silicon Node.js server (jumping straight to local WebGPU) or on an aging mobile browser (delegating safely to remote servers by default), which generation method to use can be decided dynamically, without UI blocking or interfering with the current user flow. 
+* **No Primitive-Obsession:** Heavily-typed, precision-safe wrappers for `NanoAmount` and `NanoAddress` entirely eliminate the "Stringly-Typed Money" programming anti-pattern.
 * **Resilient RPC Fallbacks:** Configure a progressive `TransportFallback` pool to gracefully route RPC requests across independent block validators without manual catch-blocks.
-* **Cross-Language FFI Preparation**: The TypeScript architecture strictly follows Domain-Driven Design (DDD) to guarantee 1:1 API compatibility with upcoming Rust, Go, and Zig ports.
+* **Cross-Language FFI Preparation**: The TypeScript architecture strictly follows Domain-Driven Design (DDD) to promote close API compatibility across different eventual programming language ports of the library.
 
 ## 📦 Installation
 
@@ -33,7 +33,20 @@ npm install @openrai/nano-core
 ## 🛠 Quick Start
 
 ### 1. Progressive Client Initialization
-The `NanoClient` uses a "Convention over Configuration" approach. Use the defaults for rapid prototyping, or inject bulletproof enterprise fallbacks.
+The `NanoClient` uses a "Convention over Configuration" approach. 
+
+#### Easy Mode (All Defaults)
+Out of the box, `NanoClient.initialize()` falls back to a public node pool and auto-configures the JIT Proof-of-Work environment profiler:
+
+```typescript
+import { NanoClient } from '@openrai/nano-core';
+
+// Zero configuration required for prototyping
+const protocolClient = NanoClient.initialize();
+```
+
+#### Enterprise Mode (Explicit Overrides)
+For production environments, every single layer of the stack is fully overridable:
 
 ```typescript
 import { 
@@ -45,15 +58,15 @@ import {
 } from '@openrai/nano-core';
 
 const protocolClient = NanoClient.initialize({
-  network: 'mainnet',
+  network: 'mainnet', // [Optional] Default is 'mainnet'
   
-  // Resilient public node pooling
+  // [Optional] Resilient public/private node pooling
   transports: TransportFallback.of([
-    'https://rpc.nano.org',
-    'https://app.natrium.io/api/rpc'
+    'https://rpc.my-private-node.com',
+    'https://rpc.nano.org'
   ]),
   
-  // JIT Environment Profiling
+  // [Optional] JIT Environment Profiling overrides
   workProvider: WorkProvider.auto({
     remotes: [
       RemoteWorkServer.of('https://api.openrai.com/work', { timeoutMs: 5000, circuitBreakerMs: 30000 })
