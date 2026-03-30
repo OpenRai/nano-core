@@ -11,13 +11,16 @@ export enum LocalCompute {
 }
 
 export class RemoteWorkServer {
-  private url: string;
-  private timeoutMs: number;
+  private _url: string;
+  private _timeoutMs: number;
   
   constructor(url: string, timeoutMs: number) {
-    this.url = url;
-    this.timeoutMs = timeoutMs;
+    this._url = url;
+    this._timeoutMs = timeoutMs;
   }
+
+  public get url(): string { return this._url; }
+  public get timeoutMs(): number { return this._timeoutMs; }
 
   static of(url: string, options: { timeoutMs?: number, circuitBreakerMs?: number } = {}) {
     return new RemoteWorkServer(url, options.timeoutMs ?? 5000);
@@ -43,6 +46,17 @@ export class WorkProvider {
 
   public static auto(options: WorkProviderOptions): WorkProvider {
     return new WorkProvider(options);
+  }
+
+  /**
+   * Generates a minimal JSON-serializable report of the work provider's active configuration.
+   */
+  public getAuditReport(): Record<string, any> {
+    return {
+      remotes: this.options.remotes?.map(r => ({ url: r.url, timeoutMs: r.timeoutMs })) || [],
+      localChain: this.options.localChain || [],
+      profiler: this.options.profiler || 'default'
+    };
   }
 
   /**
