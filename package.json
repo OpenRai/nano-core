@@ -1,0 +1,33 @@
+{
+  "name": "@openrai/nano-core",
+  "version": "1.0.0",
+  "description": "Protocol engine for Nano integration ecosystem",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "nano",
+    "xno",
+    "cryptocurrency"
+  ],
+  "author": "OpenRai",
+  "license": "MIT",
+  "dependencies": {
+    "nano-pow-with-fallback": "^1.1.2",
+    "nanocurrency": "^2.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}
