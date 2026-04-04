@@ -58,6 +58,31 @@ const client = NanoClient.initialize({
 console.log(client.getAuditReport());
 ```
 
+### 1.1 Observe Endpoint Selection
+
+Long-running services can observe which upstream endpoint became active without
+mutating transport configuration at runtime:
+
+```typescript
+import { NanoClient } from '@openrai/nano-core';
+
+const client = NanoClient.initialize();
+
+const unsubscribe = client.onEndpointChange((event) => {
+  console.log(event.kind, event.status, event.activeUrl, event.previousUrl);
+});
+
+console.log(client.getActiveEndpoints());
+// { rpc?: string, ws?: string, work?: string }
+
+// Later:
+unsubscribe();
+```
+
+This is an observe-only API. It does not reconfigure pools or alter failover
+policy; it simply exposes which endpoint was selected after a successful RPC,
+WS, or work operation.
+
 What this buys you immediately:
 
 - comma-separated env vars also work: `NANO_RPC_URL`, `NANO_WS_URL`, `NANO_WORK_URL`

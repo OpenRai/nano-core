@@ -1,6 +1,7 @@
 import { HttpEndpointPool, type HttpPoolOptions } from './transport/http.js';
 import { WsEndpointPool, type WsPoolOptions } from './transport/ws.js';
 import { WorkProvider, type WorkProviderOptions } from './work/WorkProvider.js';
+import type { EndpointActivityEvent, EndpointKind } from './transport/types.js';
 
 export interface TransportFallback {
   urls: string[];
@@ -20,15 +21,31 @@ export interface NanoClientOptions {
   warn?: (message: string) => void;
 }
 
+export interface NanoClientActiveEndpoints {
+  rpc?: string;
+  ws?: string;
+  work?: string;
+}
+
 export class NanoClient {
   public workProvider: WorkProvider;
   public rpcPool: HttpEndpointPool;
   public wsPool: WsEndpointPool;
   private options: NanoClientOptions;
+  private readonly endpointListeners: Set<(event: EndpointActivityEvent) => void>;
+  private readonly activeEndpoints: Partial<Record<EndpointKind, string>>;
   
   private constructor(options: NanoClientOptions) {
     this.options = options;
+    this.endpointListeners = new Set();
+    this.activeEndpoints = {};
     const warn = options.warn ?? ((message: string) => console.warn(`[nano-core] ${message}`));
+    const forwardEndpointChange = (event: EndpointActivityEvent): void => {
+      this.activeEndpoints[event.kind] = event.activeUrl;
+      for (const listener of this.endpointListeners) {
+        listener(event);
+      }
+    };
     const defaultRpc = [
       'https://rpc.nano.to',
       'https://node.somenano.com/proxy',
@@ -46,6 +63,7 @@ export class NanoClient {
       kind: 'rpc',
       defaults: defaultRpc,
       warn,
+      onActiveEndpointChange: forwardEndpointChange,
     };
     if (rpcUrls && rpcUrls.length > 0) rpcOptions.urls = rpcUrls;
     if (rpcEnv) rpcOptions.env = rpcEnv;
@@ -54,6 +72,7 @@ export class NanoClient {
     const wsOptions: WsPoolOptions = {
       defaults: defaultWs,
       warn,
+      onActiveEndpointChange: forwardEndpointChange,
     };
     if (options.ws && options.ws.length > 0) wsOptions.urls = options.ws;
     if (wsEnv) wsOptions.env = wsEnv;
@@ -62,6 +81,7 @@ export class NanoClient {
     const workOptions: WorkProviderOptions = {
       defaults: defaultWork,
       warn,
+      onActiveEndpointChange: forwardEndpointChange,
     };
     if (options.work && options.work.length > 0) workOptions.urls = options.work;
     if (workEnv) workOptions.env = workEnv;
@@ -71,6 +91,19 @@ export class NanoClient {
 
   public static initialize(options: NanoClientOptions = {}): NanoClient {
     return new NanoClient(options);
+  }
+
+  public onEndpointChange(listener: (event: EndpointActivityEvent) => void): () => void {
+    this.endpointListeners.add(listener);
+    return () => this.endpointListeners.delete(listener);
+  }
+
+  public getActiveEndpoints(): NanoClientActiveEndpoints {
+    return {
+      ...(this.activeEndpoints.rpc ? { rpc: this.activeEndpoints.rpc } : {}),
+      ...(this.activeEndpoints.ws ? { ws: this.activeEndpoints.ws } : {}),
+      ...(this.activeEndpoints.work ? { work: this.activeEndpoints.work } : {}),
+    };
   }
 
   /**

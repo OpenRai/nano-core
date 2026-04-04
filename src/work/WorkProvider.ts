@@ -1,4 +1,5 @@
 import { HttpEndpointPool, type HttpPoolOptions } from '../transport/http.js';
+import type { EndpointActivityEvent } from '../transport/types.js';
 import { PoWNodeBackend, PoWWebGPUBackend, PoWWebGLBackend, PoWWasmBackend } from 'nano-pow-with-fallback';
 
 /**
@@ -33,6 +34,7 @@ export interface WorkProviderOptions {
   env?: string;
   defaults?: string[];
   warn?: (message: string) => void;
+  onActiveEndpointChange?: (event: EndpointActivityEvent) => void;
   remotes?: RemoteWorkServer[];
   localChain?: LocalCompute[];
   profiler?: {
@@ -63,6 +65,7 @@ export class WorkProvider {
     if (options.urls && options.urls.length > 0) remotePoolOptions.urls = options.urls;
     if (options.env) remotePoolOptions.env = options.env;
     if (options.warn) remotePoolOptions.warn = options.warn;
+    if (options.onActiveEndpointChange) remotePoolOptions.onActiveEndpointChange = options.onActiveEndpointChange;
 
     this.remotePool = new HttpEndpointPool(remotePoolOptions);
   }
