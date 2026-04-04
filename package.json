@@ -9,6 +9,18 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./transport": {
+      "import": "./dist/transport/index.js",
+      "types": "./dist/transport/index.d.ts"
+    },
+    "./transport/http": {
+      "import": "./dist/transport/http.js",
+      "types": "./dist/transport/http.d.ts"
+    },
+    "./transport/ws": {
+      "import": "./dist/transport/ws.js",
+      "types": "./dist/transport/ws.d.ts"
     }
   },
   "scripts": {
@@ -22,11 +34,18 @@
   ],
   "author": "OpenRai",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "nano-pow-with-fallback": "^1.1.2",
     "nanocurrency": "^2.5.0"
   },
   "devDependencies": {
+    "@types/node": "^24.6.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   }

@@ -1,3 +1,4 @@
+import { HttpEndpointPool, type HttpPoolOptions } from '../transport/http.js';
 import { PoWNodeBackend, PoWWebGPUBackend, PoWWebGLBackend, PoWWasmBackend } from 'nano-pow-with-fallback';
 
 /**
@@ -28,6 +29,10 @@ export class RemoteWorkServer {
 }
 
 export interface WorkProviderOptions {
+  urls?: string[];
+  env?: string;
+  defaults?: string[];
+  warn?: (message: string) => void;
   remotes?: RemoteWorkServer[];
   localChain?: LocalCompute[];
   profiler?: {
@@ -39,9 +44,27 @@ export interface WorkProviderOptions {
 
 export class WorkProvider {
   private options: WorkProviderOptions;
+  private remotePool: HttpEndpointPool | null;
   
   private constructor(options: WorkProviderOptions) {
     this.options = options;
+    const hasRemotePool = (options.urls && options.urls.length > 0) || options.env || (options.defaults && options.defaults.length > 0);
+
+    if (!hasRemotePool) {
+      this.remotePool = null;
+      return;
+    }
+
+    const remotePoolOptions: HttpPoolOptions = {
+      kind: 'work',
+      defaults: options.defaults ?? [],
+      transportPolicy: 'bearer-and-json-body-key',
+    };
+    if (options.urls && options.urls.length > 0) remotePoolOptions.urls = options.urls;
+    if (options.env) remotePoolOptions.env = options.env;
+    if (options.warn) remotePoolOptions.warn = options.warn;
+
+    this.remotePool = new HttpEndpointPool(remotePoolOptions);
   }
 
   public static auto(options: WorkProviderOptions): WorkProvider {
@@ -53,6 +76,7 @@ export class WorkProvider {
    */
   public getAuditReport(): Record<string, any> {
     return {
+      remotePool: this.remotePool?.getAuditReport() ?? [],
       remotes: this.options.remotes?.map(r => ({ url: r.url, timeoutMs: r.timeoutMs })) || [],
       localChain: this.options.localChain || [],
       profiler: this.options.profiler || 'default'
@@ -78,8 +102,16 @@ export class WorkProvider {
    * Generate Proof-of-Work for a given hash.
    */
   public async generate(hash: string, difficulty: string): Promise<string> {
-    // In real implementation, this would route to Local vs Remote.
-    // Placeholder to satisfy signature matching the design.
-    return '0000000000000000'; // dummy work
+    if (this.remotePool) {
+      const response = await this.remotePool.postJson<{ work: string }>({
+        action: 'work_generate',
+        hash,
+        difficulty,
+      });
+      if (response.work) return response.work;
+    }
+
+    // In real implementation, this would route to local fallback engines.
+    return '0000000000000000';
   }
 }
