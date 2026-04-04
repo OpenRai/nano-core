@@ -143,12 +143,14 @@ const client = NanoClient.initialize({
 ```
 
 ### 4. Isomorphic Work Calibration
-It's critical not to freeze the browser threads. On boot, evaluate the environment. `nano-core` remembers the hardware constraints across sessions.
+`nano-core` can probe remote and local work capabilities asynchronously, then build an execution plan without doing any heavyweight work in constructors. When `profiler.mode` is `auto`, call `probe()` or `calibrate()` explicitly during startup and reuse the resulting plan for later work generation.
 
 ```typescript
-// Auto-detects whether local WebGPU/WASM is faster than network latency to remotes
+const plan = await client.workProvider.probe();
+console.log(plan.steps);
+
 const profile = await client.workProvider.calibrate();
-console.log(`Determined active PoW strategy: ${profile.activeStrategy} at ${profile.measuredMhs} MH/s.`);
+console.log(profile.activeStrategy);
 ```
 
 ### 5. Precision-Safe Execution
@@ -193,29 +195,4 @@ For collaboration, please refer to the `github.com/OpenRai/nano-core` issues boa
 
 ---
 
-## Addendum II: Browser Hostility & The Isomorphic Sandbox
-
-### 1. The Browser Execution Reality
-
-While Node.js provides unthrottled access to host silicon (delivering ~104 MH/s on Apple M1 architectures), browsers operate under strict security and power-management sandboxes. Empirical testing across modern Chromium (Brave) and WebKit (Safari) engines reveals that relying on static hardware fallbacks in a web environment is a critical architectural risk.
-
-Browser engines dynamically throttle compute APIs based on task duration and thread count, leading to three distinct phenomena that the SDK must navigate:
-
-#### A. The WebGPU "Throttle Cliff" (Sprint vs. Marathon)
-WebGPU is highly unpredictable in the browser. 
-* **The Burst:** On low-difficulty thresholds (e.g., `Open/Receive`), browsers allow WebGPU to run at maximum voltage, completing the task in milliseconds (bursting up to ~2,000 MH/s in Safari). 
-* **The Throttle:** [Inference] On high-difficulty thresholds (e.g., `Send/Change`), the task takes longer. Once the compute shader runs past a specific time budget (often 1-2 seconds), browser watchdogs classify it as a runaway script or a crypto-miner. The engine violently throttles the GPU context to protect the UI thread, causing HashRates to collapse by up to 98% (e.g., dropping from 336 MH/s to 7.5 MH/s in Chromium).
-
-#### B. The WASM "Death Spiral" (Thread Starvation)
-Counter-intuitively, spawning multiple Web Workers for WASM computation degrades performance in aggressive sandboxes like Safari. 
-* [Inference] When the SDK requests 8 parallel WASM threads for a sustained `Send/Change` calculation, the browser's resource scheduler intervenes to prevent thermal throttling and battery drain. It starves the workers of CPU cycles, resulting in multi-threaded executions taking significantly *longer* than single-threaded executions (e.g., spanning upwards of 4.5 minutes for a single block).
-
-#### C. WebGL: The Predictable Baseline
-Across all tested engines, WebGL is the most consistently paced API. Because it taps into the legacy rendering pipeline, browsers are less likely to violently throttle it mid-task. It maintains a slow but predictable ~15 MH/s regardless of the threshold difficulty.
-
-### 2. Conclusion: The Necessity of JIT Profiling
-
-These findings conclusively validate the `WorkProvider.auto()` architecture. The SDK cannot assume local hardware is safe just because `navigator.gpu` exists. 
-
-The JIT Environment Profiler must execute a sub-50ms micro-probe on load. If the probe detects a sandboxed environment where a `Send` block will trigger the "Throttle Cliff" (taking >5 seconds), the SDK must intelligently route the work to a remote BPoW server, ensuring the application remains responsive and the user's battery is preserved.
-See `docs/architecture/transport-auth.md` for the full transport/auth design.
+See `docs/architecture/transport-auth.md` for the transport/auth design. More advanced local-vs-remote work profiling is planned but not implemented in the current release.

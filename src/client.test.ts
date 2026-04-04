@@ -1,6 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NanoClient } from './client.js';
 
+vi.mock('nano-pow-with-fallback', () => {
+  class MockPowService {
+    public ready = Promise.resolve();
+    public backend = 'wasm';
+    async getProofOfWork(): Promise<{ backend: string; proofOfWork: string }> {
+      return { backend: this.backend, proofOfWork: '1111111111111111' };
+    }
+
+    cancel(): void {}
+  }
+
+  return {
+    PowBackendName: {
+      WEBGPU: 'webgpu',
+      WEBGL: 'webgl',
+      WASM: 'wasm',
+    },
+    PowService: MockPowService,
+  };
+});
+
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
   onopen: (() => void) | null = null;

@@ -1,6 +1,21 @@
 declare module 'nano-pow-with-fallback' {
-  export class PoWNodeBackend {}
-  export class PoWWebGPUBackend {}
-  export class PoWWebGLBackend {}
-  export class PoWWasmBackend {}
+  export const PowBackendName: {
+    WEBGPU: 'webgpu';
+    WEBGL: 'webgl';
+    WASM: 'wasm';
+  };
+
+  export class PowService {
+    constructor(options?: { disabledBackends?: string[] });
+    readonly ready: Promise<unknown>;
+    readonly backend: string | null;
+    getProofOfWork(input: { hash: string; threshold: string }): Promise<{
+      backend: string;
+      proofOfWork: string;
+      iterations?: number;
+    }>;
+    cancel(): void;
+  }
+
+  export class PowServiceAbortError extends Error {}
 }
