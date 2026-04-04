@@ -1,7 +1,7 @@
 import { HttpEndpointPool, type HttpPoolOptions } from './transport/http.js';
 import { WsEndpointPool, type WsPoolOptions } from './transport/ws.js';
 import { WorkProvider, type WorkProviderOptions } from './work/WorkProvider.js';
-import type { EndpointActivityEvent, EndpointKind } from './transport/types.js';
+import type { EndpointActivityEvent, EndpointAuditRecord, EndpointKind } from './transport/types.js';
 
 export interface TransportFallback {
   urls: string[];
@@ -25,6 +25,13 @@ export interface NanoClientActiveEndpoints {
   rpc?: string;
   ws?: string;
   work?: string;
+}
+
+export interface NanoClientAuditReport {
+  network: 'mainnet' | 'testnet' | 'beta';
+  rpc: EndpointAuditRecord[];
+  ws: EndpointAuditRecord[];
+  workProvider: ReturnType<WorkProvider['getAuditReport']>;
 }
 
 export class NanoClient {
@@ -110,12 +117,12 @@ export class NanoClient {
    * Generates a minimal JSON-serializable report of the active configuration.
    * Useful for deploy-time auditing and startup logs to detect misconfigurations.
    */
-  public getAuditReport(): Record<string, any> {
+  public getAuditReport(): NanoClientAuditReport {
     return {
       network: this.options.network ?? 'mainnet',
       rpc: this.rpcPool.getAuditReport(),
       ws: this.wsPool.getAuditReport(),
-      workProvider: this.workProvider.getAuditReport()
+      workProvider: this.workProvider.getAuditReport(),
     };
   }
 

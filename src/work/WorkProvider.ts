@@ -1,5 +1,5 @@
 import { HttpEndpointPool, type HttpPoolOptions } from '../transport/http.js';
-import type { EndpointActivityEvent } from '../transport/types.js';
+import type { EndpointActivityEvent, EndpointAuditRecord } from '../transport/types.js';
 import { PoWNodeBackend, PoWWebGPUBackend, PoWWebGLBackend, PoWWasmBackend } from 'nano-pow-with-fallback';
 
 /**
@@ -35,6 +35,7 @@ export interface WorkProviderOptions {
   defaults?: string[];
   warn?: (message: string) => void;
   onActiveEndpointChange?: (event: EndpointActivityEvent) => void;
+  timeoutMs?: number;
   remotes?: RemoteWorkServer[];
   localChain?: LocalCompute[];
   profiler?: {
@@ -61,6 +62,7 @@ export class WorkProvider {
       kind: 'work',
       defaults: options.defaults ?? [],
       transportPolicy: 'bearer-and-json-body-key',
+      ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
     };
     if (options.urls && options.urls.length > 0) remotePoolOptions.urls = options.urls;
     if (options.env) remotePoolOptions.env = options.env;
@@ -74,15 +76,24 @@ export class WorkProvider {
     return new WorkProvider(options);
   }
 
+  public getRemoteAuditReport(): EndpointAuditRecord[] {
+    return this.remotePool?.getAuditReport() ?? [];
+  }
+
   /**
    * Generates a minimal JSON-serializable report of the work provider's active configuration.
    */
-  public getAuditReport(): Record<string, any> {
+  public getAuditReport(): {
+    remotePool: EndpointAuditRecord[];
+    remotes: Array<{ url: string; timeoutMs: number }>;
+    localChain: LocalCompute[];
+    profiler: WorkProviderOptions['profiler'] | 'default';
+  } {
     return {
-      remotePool: this.remotePool?.getAuditReport() ?? [],
-      remotes: this.options.remotes?.map(r => ({ url: r.url, timeoutMs: r.timeoutMs })) || [],
-      localChain: this.options.localChain || [],
-      profiler: this.options.profiler || 'default'
+      remotePool: this.getRemoteAuditReport(),
+      remotes: this.options.remotes?.map((remote) => ({ url: remote.url, timeoutMs: remote.timeoutMs })) ?? [],
+      localChain: this.options.localChain ?? [],
+      profiler: this.options.profiler ?? 'default',
     };
   }
 

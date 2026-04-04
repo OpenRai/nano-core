@@ -1,6 +1,6 @@
 <div align="center">
   <h1>@openrai/nano-core</h1>
-  <p><b>The unopinionated, statically-typed, isomorphic protocol engine for the Nano (XNO) ecosystem.</b></p>
+  <p><b>Typed Nano primitives plus practical client utilities for RPC, WebSocket, and work generation.</b></p>
 
   [![npm version](https://img.shields.io/npm/v/@openrai/nano-core.svg?style=flat-square)](https://www.npmjs.com/package/@openrai/nano-core)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -9,20 +9,7 @@
 
 ---
 
-Historically, Nano developers have faced a fragmented integration landscape: ranging from "heavy, enterprise:y" backends to lightweight "frontend-only" implementation, suffering either from rigid vendor lock-in or fragile PoW architecture.
-
-**`@openrai/nano-core`** aims to be the canonical TypeScript Nano package: typed primitives, sane defaults, transport failover, endpoint normalization, auth handling, and a stable first-party API surface even when the internals wrap other best-of-breed libraries.
-
----
-
-## 🚀 Key Features
-
-* **Bypassing the "Frontier Dilemma":** Nano is a state-based block-lattice where each block depends strictly on the exact final state of the previous frontier. This strong design choise is one of the main reasons why Nano can be feeless and energy efficient, but it often becomes a stumbling block for integrations. `@openrai/nano-core` provides internal concurrent Mutex queuing to perfectly sequentialize blocks even under heavy asynchronous loads, eliminating "Fork" or "Gap" errors.
-* **Isomorphic Proof-of-Work (JIT Profiling):** Wraps `nano-pow-with-fallback` in a Just-In-Time (JIT) environment profiler via `WorkProvider.auto()`. What it means is that whether running on an Apple Silicon Node.js server (jumping straight to local WebGPU) or on an aging mobile browser (delegating safely to remote servers by default), which generation method to use can be decided dynamically, without UI blocking or interfering with the current user flow. 
-* **No Primitive-Obsession:** Heavily-typed, precision-safe wrappers for `NanoAmount` and `NanoAddress` entirely eliminate the "Stringly-Typed Money" programming anti-pattern.
-* **Resilient RPC / WS / Work Fallbacks:** Endpoint pools validate eagerly, deduplicate, apply endpoint-local exponential backoff, and only fail once all viable options are exhausted.
-* **Secret-Safe Endpoint Normalization:** API keys from query params or URL userinfo are converted into structured auth metadata and redacted from canonical URLs and audit output.
-* **Cross-Language FFI Preparation**: The TypeScript architecture strictly follows Domain-Driven Design (DDD) to promote close API compatibility across different eventual programming language ports of the library.
+`@openrai/nano-core` provides typed Nano primitives and a small transport layer for applications that need reliable RPC, WebSocket, and work generation behavior without rebuilding endpoint parsing, auth handling, failover, or audit visibility. It is designed for direct use in services, scripts, and browser-capable clients, with explicit defaults and observable transport state.
 
 ## 📦 Installation
 
