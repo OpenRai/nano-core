@@ -1,6 +1,6 @@
 {
   "name": "@openrai/nano-core",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Protocol engine for Nano integration ecosystem",
   "type": "module",
   "main": "./dist/index.js",
