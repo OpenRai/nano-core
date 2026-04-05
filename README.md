@@ -196,3 +196,25 @@ For collaboration, please refer to the `github.com/OpenRai/nano-core` issues boa
 ---
 
 See `docs/architecture/transport-auth.md` for the transport/auth design. More advanced local-vs-remote work profiling is planned but not implemented in the current release.
+
+## Release Flow
+
+`@openrai/nano-core` is a single-package repo, so versioning is manual and publishing is automated.
+
+Typical release steps:
+
+1. Bump the package version:
+
+```bash
+pnpm version patch
+```
+
+or, without git side effects:
+
+```bash
+pnpm version patch --no-git-tag-version
+```
+
+2. Push the version commit and tag to `main`.
+
+GitHub Actions then builds, tests, and publishes from `.github/workflows/release.yml` using npm Trusted Publisher.
