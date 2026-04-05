@@ -25,7 +25,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "release": "pnpm publish --access public --no-git-checks"
   },
   "keywords": [
     "nano",
