@@ -21,7 +21,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 23
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -35,4 +35,4 @@ jobs:
         run: pnpm test
 
       - name: Publish package
-        run: pnpm release
+        run: npm publish --access public
