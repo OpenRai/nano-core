@@ -25,6 +25,9 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
+      - name: Install npm 11 for OIDC support
+        run: npm install -g npm@11
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
