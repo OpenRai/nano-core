@@ -21,29 +21,35 @@ npm install @openrai/nano-core
 ## 🛠 Quick Start
 
 ### 1. Minimal Client
-The default surface should feel obvious on first read:
+`nano-core` handles endpoint selection, auth redaction, and precision-safe math so you can focus on the task at hand:
 
 ```typescript
-import { NanoClient } from '@openrai/nano-core';
+import { NanoClient, NanoAddress, NanoAmount } from '@openrai/nano-core';
 
-const client = NanoClient.initialize({
-  rpc: [
-    'https://rpc.primary.example.com?apiKey=secret-rpc',
-    'https://rpc.nano.to',
-  ], // [Optional] Defaults to the April 2026 public RPC set
-  ws: [
-    'wss://ws.primary.example.com?api_key=secret-ws',
-    'wss://rpc.nano.to',
-  ], // [Optional] Defaults to public WebSocket endpoints
-  work: [
-    'https://work.primary.example.com?key=secret-work',
-    'https://rpc.nano.to',
-  ], // [Optional] Defaults to `https://rpc.nano.to` as the current public work endpoint
-  warn: (message) => console.warn(message), // [Optional] Defaults to console.warn with nano-core prefix
-});
+// Start with built-in public endpoints — no config required
+const client = NanoClient.initialize();
 
-console.log(client.getAuditReport());
+// Validate a destination address (checksum-verified, throws on bad input)
+const destination = NanoAddress.parse(
+  'nano_3arg3asgtigae3xckabaaewkx3bzsh7nwz7jkmjos79ihyaxwphhm6qgjps4',
+);
+
+// Express value in human-readable NANO — stored as precision-safe raw internally
+const amount = NanoAmount.fromNano('1.25');
+
+// Hydrate a wallet from a seed (keep your seed in an env var, never hard-code it)
+const wallet = await client.hydrateWallet(process.env.NANO_SEED!, { index: 0 });
+const hash = await wallet.send(destination, amount);
+
+console.log(`Sent ${amount} NANO → ${destination}`);
+console.log(`Block hash: ${hash}`);
 ```
+
+Under the hood, `nano-core` has already:
+- Selected a live RPC from the built-in April 2026 public pool
+- Validated the address checksum and derived the public key
+- Stored `1.25 NANO` as `1250000000000000000000000000000` raw — no float drift
+- Redacted any API keys from audit output
 
 ### 1.1 Observe Endpoint Selection
 
