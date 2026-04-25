@@ -1,6 +1,6 @@
 {
   "name": "@openrai/nano-core",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "Protocol engine for Nano integration ecosystem",
   "repository": "https://github.com/OpenRai/nano-core",
   "type": "module",
@@ -43,6 +43,7 @@
     "dist"
   ],
   "dependencies": {
+    "blakejs": "^1.2.1",
     "nano-pow-with-fallback": "^1.1.2",
     "nanocurrency": "^2.5.0"
   },
