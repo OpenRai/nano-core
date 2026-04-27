@@ -12,8 +12,8 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1
       nano-pow-with-fallback:
-        specifier: ^1.2.4
-        version: 1.2.4
+        specifier: ^1.2.5
+        version: 1.2.5
       nanocurrency:
         specifier: ^2.5.0
         version: 2.5.0
@@ -360,8 +360,8 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  nano-pow-with-fallback@1.2.4:
-    resolution: {integrity: sha512-pmGGVTyOXMA/CyEwuzjssBdqq3BMx0ni1atjZuWQRe/Vte3Hk9L6ZqxNpEbvS5pzaUUVXTqoW8T9TQVUZIJX8Q==}
+  nano-pow-with-fallback@1.2.5:
+    resolution: {integrity: sha512-o+nQburELaTzot059m5JXecf06ClCs9GcEjyZT8X+lXOgPwFXY0CMK9JJ//Mb0bO3vecnV3vWLwhw/0PV8Ls/g==}
 
   nanocurrency@2.5.0:
     resolution: {integrity: sha512-zMDlgBCML0vMGvldsZN1Np93vwiMjaBLCkOM2tXv0LNIpty8HghDMZiNRzfBPkP70oRhRU+hOpVCEpTzZK5gDQ==}
@@ -768,7 +768,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  nano-pow-with-fallback@1.2.4:
+  nano-pow-with-fallback@1.2.5:
     dependencies:
       '@sylphx/webgpu': 1.0.4
       blakejs: 1.2.1
