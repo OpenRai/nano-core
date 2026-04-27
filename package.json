@@ -1,6 +1,6 @@
 {
   "name": "@openrai/nano-core",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Protocol engine for Nano integration ecosystem",
   "repository": "https://github.com/OpenRai/nano-core",
   "type": "module",
