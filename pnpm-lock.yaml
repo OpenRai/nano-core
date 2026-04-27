@@ -12,8 +12,8 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1
       nano-pow-with-fallback:
-        specifier: ^1.1.2
-        version: 1.1.2
+        specifier: github:cbrunnkvist/nano-pow-with-fallback#v1.2.1
+        version: https://codeload.github.com/cbrunnkvist/nano-pow-with-fallback/tar.gz/e7a3d5d0b2fe8dd37429019462bd18e8f5768bd6
       nanocurrency:
         specifier: ^2.5.0
         version: 2.5.0
@@ -360,8 +360,9 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  nano-pow-with-fallback@1.1.2:
-    resolution: {integrity: sha512-X6pH4+X9RWCQCbYMcZaTk638elBNXkmxcL/iAeu1WFAe7LTO3BFNdnaHAdMSN5q+j+NTqgmpMtIYFW3ckk7w7w==}
+  nano-pow-with-fallback@https://codeload.github.com/cbrunnkvist/nano-pow-with-fallback/tar.gz/e7a3d5d0b2fe8dd37429019462bd18e8f5768bd6:
+    resolution: {tarball: https://codeload.github.com/cbrunnkvist/nano-pow-with-fallback/tar.gz/e7a3d5d0b2fe8dd37429019462bd18e8f5768bd6}
+    version: 1.2.1
 
   nanocurrency@2.5.0:
     resolution: {integrity: sha512-zMDlgBCML0vMGvldsZN1Np93vwiMjaBLCkOM2tXv0LNIpty8HghDMZiNRzfBPkP70oRhRU+hOpVCEpTzZK5gDQ==}
@@ -768,7 +769,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  nano-pow-with-fallback@1.1.2:
+  nano-pow-with-fallback@https://codeload.github.com/cbrunnkvist/nano-pow-with-fallback/tar.gz/e7a3d5d0b2fe8dd37429019462bd18e8f5768bd6:
     dependencies:
       '@sylphx/webgpu': 1.0.4
       blakejs: 1.2.1

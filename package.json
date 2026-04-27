@@ -44,7 +44,7 @@
   ],
   "dependencies": {
     "blakejs": "^1.2.1",
-    "nano-pow-with-fallback": "^1.1.2",
+    "nano-pow-with-fallback": "^1.2.1",
     "nanocurrency": "^2.5.0"
   },
   "devDependencies": {
