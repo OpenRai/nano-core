@@ -1,6 +1,7 @@
 import { HttpEndpointPool, type HttpPoolOptions } from '../transport/http.js';
 import type { EndpointActivityEvent, EndpointAuditRecord } from '../transport/types.js';
 import { PowBackendName, PowService } from 'nano-pow-with-fallback';
+import { createCacheStore, type WorkPlanCacheStore } from './cache-store.js';
 
 export enum LocalCompute {
   WEBGPU = 'webgpu',
@@ -67,8 +68,8 @@ export interface WorkProviderOptions {
   localChain?: LocalCompute[];
   profiler?: {
     mode: 'manual' | 'auto';
-    preferLocalAboveMhs: number;
-    cacheStrategy: 'persistent' | 'memory';
+    preferLocalAboveMhs?: number;
+    cacheStrategy?: 'persistent' | 'memory';
   };
 }
 
@@ -86,6 +87,24 @@ function localComputeToBackendName(compute: LocalCompute): PowBackendNameValue {
     case LocalCompute.WASM:
       return PowBackendName.WASM;
   }
+}
+
+function computeOptionsFingerprint(options: WorkProviderOptions): string {
+  const parts: Record<string, unknown> = {
+    urls: options.urls?.slice().sort() ?? [],
+    defaults: options.defaults?.slice().sort() ?? [],
+    env: options.env ?? null,
+    remotes: options.remotes?.map((r) => r.url).sort() ?? [],
+    localChain: options.localChain ?? DEFAULT_LOCAL_CHAIN,
+  };
+
+  const data = JSON.stringify(parts, Object.keys(parts).sort());
+
+  let hash = 5381;
+  for (let i = 0; i < data.length; i++) {
+    hash = ((hash << 5) + hash) ^ data.charCodeAt(i);
+  }
+  return Math.abs(hash).toString(16);
 }
 
 function localComputeToPlanStep(compute: LocalCompute): WorkPlanStepKind {
@@ -141,15 +160,19 @@ export class WorkProvider {
   private readonly remotePool: HttpEndpointPool | null;
   private readonly warn: (message: string) => void;
   private readonly localTimeoutMs: number;
+  private readonly cacheStore: WorkPlanCacheStore;
   private lastGenerationTrace: WorkGenerationTrace | null = null;
   private lastProbeResults: WorkProbeResult[] = [];
   private executionPlan: WorkExecutionPlan;
   private probePromise: Promise<WorkExecutionPlan> | null = null;
+  private readonly preferLocalAboveMhs: number;
 
-  private constructor(options: WorkProviderOptions) {
+  private constructor(options: WorkProviderOptions, cacheStore: WorkPlanCacheStore) {
     this.options = options;
     this.warn = options.warn ?? ((message: string) => console.warn(`[nano-core] ${message}`));
     this.localTimeoutMs = DEFAULT_LOCAL_TIMEOUT_MS;
+    this.cacheStore = cacheStore;
+    this.preferLocalAboveMhs = options.profiler?.preferLocalAboveMhs ?? 0;
 
     const hasRemotePool = (options.urls && options.urls.length > 0) || options.env || (options.defaults && options.defaults.length > 0);
     if (!hasRemotePool) {
@@ -172,7 +195,10 @@ export class WorkProvider {
   }
 
   public static auto(options: WorkProviderOptions): WorkProvider {
-    return new WorkProvider(options);
+    const fingerprint = computeOptionsFingerprint(options);
+    const cacheStrategy = options.profiler?.cacheStrategy ?? 'memory';
+    const cacheStore = createCacheStore(cacheStrategy, fingerprint);
+    return new WorkProvider(options, cacheStore);
   }
 
   public getRemoteAuditReport(): EndpointAuditRecord[] {
@@ -215,6 +241,12 @@ export class WorkProvider {
   }
 
   public async probe(): Promise<WorkExecutionPlan> {
+    const cached = this.cacheStore.read();
+    if (cached) {
+      this.executionPlan = cached;
+      return cached;
+    }
+
     if (this.probePromise) {
       return this.probePromise;
     }
@@ -223,6 +255,7 @@ export class WorkProvider {
     try {
       const plan = await this.probePromise;
       this.executionPlan = plan;
+      await this.cacheStore.write(plan);
       return plan;
     } finally {
       this.probePromise = null;
@@ -310,8 +343,17 @@ export class WorkProvider {
       .filter((result) => !result.available)
       .map((result) => planStepToBackendName(result.kind));
 
-    const steps: WorkPlanStep[] = [];
-    if (availableLocals.length > 0) {
+    if (availableLocals.length === 0) {
+      if (remote?.available) {
+        return { source: 'probe', steps: [{ kind: 'remote' }], disabledLocalBackends, probeResults: results };
+      }
+      return this.buildDefaultPlan();
+    }
+
+    const threshold = this.preferLocalAboveMhs;
+
+    if (threshold === 0) {
+      const steps: WorkPlanStep[] = [];
       steps.push({ kind: availableLocals[0].kind });
       if (remote?.available) {
         steps.push({ kind: 'remote' });
@@ -319,20 +361,47 @@ export class WorkProvider {
       for (const local of availableLocals.slice(1)) {
         steps.push({ kind: local.kind });
       }
-    } else if (remote?.available) {
-      steps.push({ kind: 'remote' });
+      return { source: 'probe', steps, disabledLocalBackends, probeResults: results };
+    }
+
+    const fastLocals: WorkProbeResult[] = [];
+    const slowLocals: WorkProbeResult[] = [];
+
+    for (const local of availableLocals) {
+      const mhs = 1000 / (local.durationMs ?? Number.POSITIVE_INFINITY);
+      if (mhs >= threshold) {
+        fastLocals.push(local);
+      } else {
+        slowLocals.push(local);
+      }
+    }
+
+    const steps: WorkPlanStep[] = [];
+
+    if (fastLocals.length > 0) {
+      for (const local of fastLocals) {
+        steps.push({ kind: local.kind });
+      }
+      if (remote?.available) {
+        steps.push({ kind: 'remote' });
+      }
+      for (const local of slowLocals) {
+        steps.push({ kind: local.kind });
+      }
+    } else {
+      if (remote?.available) {
+        steps.push({ kind: 'remote' });
+      }
+      for (const local of slowLocals) {
+        steps.push({ kind: local.kind });
+      }
     }
 
     if (steps.length === 0) {
       return this.buildDefaultPlan();
     }
 
-    return {
-      source: 'probe',
-      steps,
-      disabledLocalBackends,
-      probeResults: results,
-    };
+    return { source: 'probe', steps, disabledLocalBackends, probeResults: results };
   }
 
   private async runProbe(): Promise<WorkExecutionPlan> {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkProvider } from './WorkProvider.js';
+import * as cacheStore from './cache-store.js';
 
 vi.mock('nano-pow-with-fallback', () => {
   class MockPowService {
@@ -114,5 +115,86 @@ describe('WorkProvider orchestration', () => {
     expect(profile.activeStrategy).toBe('planned');
     expect(profile.measuredMhs).toBeGreaterThanOrEqual(0);
     expect(provider.getAuditReport().executionPlan.source).toBe('probe');
+  });
+
+  it('cacheStrategy memory keeps probe result in memory across multiple probes', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ node_vendor: 'nano' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const provider = WorkProvider.auto({
+      urls: ['https://work.example.com'],
+      profiler: { mode: 'auto', preferLocalAboveMhs: 0, cacheStrategy: 'memory' },
+    });
+
+    const probeCountBefore = fetchMock.mock.calls.length;
+    await provider.probe();
+    await provider.probe();
+    await provider.probe();
+    const probeCountAfter = fetchMock.mock.calls.length;
+
+    expect(probeCountAfter - probeCountBefore).toBe(1);
+  });
+
+  it('preferLocalAboveMhs with low threshold places fast locals before remote', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ node_vendor: 'nano' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const provider = WorkProvider.auto({
+      urls: ['https://work.example.com'],
+      profiler: { mode: 'auto', preferLocalAboveMhs: 0, cacheStrategy: 'memory' },
+    });
+
+    const plan = await provider.probe();
+
+    const stepKinds = plan.steps.map((s) => s.kind);
+    const remoteIdx = stepKinds.indexOf('remote');
+    const webgpuIdx = stepKinds.indexOf('webgpu');
+
+    expect(webgpuIdx).toBeLessThan(remoteIdx);
+  });
+
+  it('preferLocalAboveMhs with high threshold puts remote before slow locals', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ node_vendor: 'nano' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const provider = WorkProvider.auto({
+      urls: ['https://work.example.com'],
+      profiler: { mode: 'auto', preferLocalAboveMhs: 200, cacheStrategy: 'memory' },
+    });
+
+    const plan = await provider.probe();
+
+    const stepKinds = plan.steps.map((s) => s.kind);
+    const remoteIdx = stepKinds.indexOf('remote');
+    const webgpuIdx = stepKinds.indexOf('webgpu');
+
+    expect(remoteIdx).toBeGreaterThan(webgpuIdx);
+  });
+
+  it('preferLocalAboveMhs with no fast locals puts remote first', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ node_vendor: 'nano' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const provider = WorkProvider.auto({
+      urls: ['https://work.example.com'],
+      profiler: { mode: 'auto', preferLocalAboveMhs: 2000, cacheStrategy: 'memory' },
+    });
+
+    const plan = await provider.probe();
+
+    const stepKinds = plan.steps.map((s) => s.kind);
+    const remoteIdx = stepKinds.indexOf('remote');
+    const webgpuIdx = stepKinds.indexOf('webgpu');
+
+    expect(remoteIdx).toBe(0);
+    expect(webgpuIdx).toBe(1);
   });
 });
