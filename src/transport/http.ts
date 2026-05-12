@@ -6,14 +6,18 @@ export interface HttpPoolOptions extends Omit<EndpointPoolOptions, 'kind'> {
   timeoutMs?: number;
 }
 
-function buildHeaders(endpoint: NormalizedEndpoint, extraHeaders?: Record<string, string>): Record<string, string> {
+export function buildHeaders(endpoint: NormalizedEndpoint, extraHeaders?: Record<string, string>): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(extraHeaders ?? {}),
   };
 
   if (endpoint.auth.type === 'api-key') {
-    headers['Authorization'] = `Bearer ${endpoint.auth.value}`;
+    if (endpoint.auth.policy === 'basic-header') {
+      headers['Authorization'] = `Basic ${btoa(`${endpoint.auth.value}:`)}`;
+    } else {
+      headers['Authorization'] = `Bearer ${endpoint.auth.value}`;
+    }
   }
 
   return headers;

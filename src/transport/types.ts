@@ -2,7 +2,7 @@ export type EndpointKind = 'rpc' | 'ws' | 'work';
 
 export type AuthSource = 'explicit' | 'query' | 'userinfo';
 
-export type TransportPolicy = 'bearer-header' | 'json-body-key' | 'bearer-and-json-body-key';
+export type TransportPolicy = 'bearer-header' | 'basic-header' | 'json-body-key' | 'bearer-and-json-body-key';
 
 export type EndpointAuth =
   | { type: 'none' }

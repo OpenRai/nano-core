@@ -133,7 +133,11 @@ becomes:
 
 ### HTTP RPC / work
 
-Default:
+Default for query params:
+
+- `Authorization: Bearer <key>`
+
+Default for URL userinfo:
 
 - `Authorization: Bearer <key>`
 
