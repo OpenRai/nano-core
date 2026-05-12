@@ -45,10 +45,12 @@
   "dependencies": {
     "blakejs": "^1.2.1",
     "nano-pow-with-fallback": "^1.2.6",
-    "nanocurrency": "^2.5.0"
+    "nanocurrency": "^2.5.0",
+    "webgpu": "^0.4.0"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "@webgpu/types": "^0.1.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   }

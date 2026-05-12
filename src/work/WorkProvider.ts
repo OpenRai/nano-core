@@ -2,6 +2,7 @@ import { HttpEndpointPool, type HttpPoolOptions } from '../transport/http.js';
 import type { EndpointActivityEvent, EndpointAuditRecord } from '../transport/types.js';
 import { PowBackendName, PowService } from 'nano-pow-with-fallback';
 import { createCacheStore, type WorkPlanCacheStore } from './cache-store.js';
+import { ensureWebGPU } from '../webgpu-init.js';
 
 export enum LocalCompute {
   WEBGPU = 'webgpu',
@@ -241,6 +242,7 @@ export class WorkProvider {
   }
 
   public async probe(): Promise<WorkExecutionPlan> {
+    await ensureWebGPU();
     const cached = this.cacheStore.read();
     if (cached) {
       this.executionPlan = cached;
