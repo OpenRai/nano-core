@@ -4,3 +4,4 @@ dist/
 .worktrees/
 tsconfig.tsbuildinfo
 .kilo/
+pnpm-workspace.yaml
