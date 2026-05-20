@@ -1,26 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NanoClient } from './client.js';
 
-vi.mock('nano-pow-with-fallback', () => {
-  class MockPowService {
-    public ready = Promise.resolve();
-    public backend = 'wasm';
-    async getProofOfWork(): Promise<{ backend: string; proofOfWork: string }> {
-      return { backend: this.backend, proofOfWork: '1111111111111111' };
-    }
-
-    cancel(): void {}
-  }
-
-  return {
-    PowBackendName: {
-      WEBGPU: 'webgpu',
-      WEBGL: 'webgl',
-      WASM: 'wasm',
-    },
-    PowService: MockPowService,
-  };
-});
+vi.mock('nano-rspow-node', () => ({
+  WorkType: { Send: 'Send', Receive: 'Receive', Epoch1: 'Epoch1', Dev: 'Dev' },
+  generateWork: vi.fn(async () => '1111111111111111'),
+  validateWork: vi.fn(() => true),
+}));
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -79,20 +64,15 @@ describe('NanoClient endpoint observation', () => {
     expect(client.getActiveEndpoints()).toEqual({ ws: 'wss://ws.example.com/' });
   });
 
-  it('emits work endpoint change events and tracks active work endpoint', async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ work: '0000000000000000' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }));
-
-    const client = NanoClient.initialize({ work: ['https://work.example.com'] });
+  it('uses local work generation without activating a work endpoint', async () => {
+    const client = NanoClient.initialize();
     const events: string[] = [];
     client.onEndpointChange((event) => events.push(`${event.kind}:${event.status}:${event.activeUrl}`));
 
     await client.workProvider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffff800000000');
 
-    expect(events).toEqual(['work:connected:https://work.example.com/']);
-    expect(client.getActiveEndpoints()).toEqual({ work: 'https://work.example.com/' });
+    expect(events).toEqual([]);
+    expect(client.getActiveEndpoints()).toEqual({});
   });
 
   it('supports unsubscribing endpoint listeners', async () => {

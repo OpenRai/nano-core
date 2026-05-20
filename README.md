@@ -78,16 +78,16 @@ WS, or work operation.
 
 What this buys you immediately:
 
-- comma-separated env vars also work: `NANO_RPC_URL`, `NANO_WS_URL`, `NANO_WORK_URL`
+- comma-separated env vars also work: `NANO_RPC_URL`, `NANO_WS_URL`
 - malformed or duplicate endpoints are dropped during construction
 - API keys in query params or URL userinfo are extracted and redacted from audit output
 - failover and endpoint-local backoff happen inside the pool, not in your app code
 
-Current built-in defaults as of April 2026:
+Current built-in defaults as of May 2026:
 
 - RPC: `https://rpc.nano.to`, `https://node.somenano.com/proxy`, `https://rainstorm.city/api`, `https://nanoslo.0x.no/proxy`
 - WS: `wss://rpc.nano.to`
-- Work: `https://rpc.nano.to`
+- Work: local CPU/GPU via `nano-rspow-node` (no remote work server)
 
 ### 2. Zero-Config Prototype Mode
 Out of the box, `NanoClient.initialize()` falls back to default public RPC / WS / work pools and auto-configures the work provider:
@@ -105,8 +105,6 @@ For production environments, you can override only the pieces you care about whi
 import {
   NanoClient,
   WorkProvider,
-  RemoteWorkServer,
-  LocalCompute,
 } from '@openrai/nano-core';
 
 const client = NanoClient.initialize({
@@ -114,36 +112,19 @@ const client = NanoClient.initialize({
   rpc: [
     'https://rpc.private.example.com?apiKey=secret-rpc',
     'https://rpc.nano.to',
-  ], // [Optional] Defaults to the April 2026 public RPC set
+  ], // [Optional] Defaults to the May 2026 public RPC set
   ws: [
     'wss://ws.private.example.com?api_key=secret-ws',
     'wss://rpc.nano.to',
   ], // [Optional] Defaults to public WebSocket endpoints
   workProvider: WorkProvider.auto({
-    urls: [
-      'https://work.private.example.com?key=secret-work',
-    ], // [Optional] Defaults to `https://rpc.nano.to` when omitted
-    remotes: [
-      RemoteWorkServer.of(
-        'https://work-backup.example.com',
-        {
-          timeoutMs: 5000, // [Optional] Defaults to 5000
-          circuitBreakerMs: 30000, // [Optional] Reserved for future tuning
-        },
-      ),
-    ], // [Optional] Additional remote work backends
-    localChain: [
-      LocalCompute.WEBGPU,
-      LocalCompute.WASM_THREADS,
-      LocalCompute.CPU,
-    ], // [Optional] Local fallback order
     profiler: {
       mode: 'manual',
       preferLocalAboveMhs: 30,
       cacheStrategy: 'persistent',
     }, // [Optional] Calibration strategy overrides
     warn: (message) => console.warn(message), // [Optional] Defaults to console.warn with nano-core prefix
-  }), // [Optional] Defaults to WorkProvider.auto(...) using normalized work endpoints
+  }), // [Optional] Defaults to WorkProvider.auto() using local nano-rspow-node engine
   warn: (message) => console.warn(message), // [Optional] Defaults to console.warn with nano-core prefix
 });
 ```

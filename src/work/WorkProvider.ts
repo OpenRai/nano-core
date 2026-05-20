@@ -1,72 +1,56 @@
-import { HttpEndpointPool, type HttpPoolOptions } from '../transport/http.js';
-import type { EndpointActivityEvent, EndpointAuditRecord } from '../transport/types.js';
-import { PowBackendName, PowService } from 'nano-pow-with-fallback';
+import { generateWork, validateWork, WorkType } from 'nano-rspow-node';
 import { createCacheStore, type WorkPlanCacheStore } from './cache-store.js';
-import { ensureWebGPU } from '../webgpu-init.js';
-
-export enum LocalCompute {
-  WEBGPU = 'webgpu',
-  WEBGL = 'webgl',
-  WASM = 'wasm',
-}
-
-type PowBackendNameValue = typeof PowBackendName[keyof typeof PowBackendName];
-type WorkPlanStepKind = 'remote' | 'webgpu' | 'webgl' | 'wasm';
 
 export interface WorkCalibrationProfile {
   measuredMhs: number;
-  activeStrategy: 'remote-first' | 'planned';
+  activeStrategy: 'local' | 'planned';
 }
 
 export interface WorkGenerationTrace {
-  mode: 'remote' | 'local';
-  backend?: PowBackendNameValue;
+  mode: 'local';
+  backend?: string;
 }
 
 export interface WorkProbeResult {
-  kind: WorkPlanStepKind;
+  kind: 'local';
   available: boolean;
   durationMs?: number;
   reason?: string;
 }
 
 export interface WorkPlanStep {
-  kind: WorkPlanStepKind;
+  kind: 'local';
 }
 
 export interface WorkExecutionPlan {
   source: 'default' | 'probe';
   steps: WorkPlanStep[];
-  disabledLocalBackends: PowBackendNameValue[];
+  disabledLocalEngines: string[];
   probeResults: WorkProbeResult[];
 }
 
-export class RemoteWorkServer {
-  private readonly _url: string;
-  private readonly _timeoutMs: number;
+export interface LocalPowEngine {
+  readonly name: string;
+  generate(hash: string, difficulty: string): Promise<string>;
+  validate(hash: string, work: string, difficulty: string): boolean;
+}
 
-  constructor(url: string, timeoutMs: number) {
-    this._url = url;
-    this._timeoutMs = timeoutMs;
+export class NanoRspowEngine implements LocalPowEngine {
+  public readonly name = 'nano-rspow-node';
+
+  public async generate(hash: string, difficulty: string): Promise<string> {
+    return await generateWork(hash, difficultyToWorkType(difficulty));
   }
 
-  public get url(): string { return this._url; }
-  public get timeoutMs(): number { return this._timeoutMs; }
-
-  public static of(url: string, options: { timeoutMs?: number, circuitBreakerMs?: number } = {}): RemoteWorkServer {
-    return new RemoteWorkServer(url, options.timeoutMs ?? 5000);
+  public validate(hash: string, work: string, difficulty: string): boolean {
+    return validateWork(hash, work, difficultyToWorkType(difficulty));
   }
 }
 
+
 export interface WorkProviderOptions {
-  urls?: string[];
-  env?: string;
-  defaults?: string[];
   warn?: (message: string) => void;
-  onActiveEndpointChange?: (event: EndpointActivityEvent) => void;
-  timeoutMs?: number;
-  remotes?: RemoteWorkServer[];
-  localChain?: LocalCompute[];
+  localEngine?: LocalPowEngine;
   profiler?: {
     mode: 'manual' | 'auto';
     preferLocalAboveMhs?: number;
@@ -74,29 +58,32 @@ export interface WorkProviderOptions {
   };
 }
 
-const DEFAULT_LOCAL_CHAIN: LocalCompute[] = [LocalCompute.WEBGPU, LocalCompute.WEBGL, LocalCompute.WASM];
 const DEFAULT_LOCAL_TIMEOUT_MS = 10_000;
 const PROBE_HASH = 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789';
-const PROBE_DIFFICULTY = 'fffffe0000000000';
+const PROBE_DIFFICULTY = 'fffffff800000000';
+const EPOCH_2_SEND_THRESHOLD = 'fffffff800000000';
+const EPOCH_2_RECEIVE_THRESHOLD = 'fffffe0000000000';
+const EPOCH_1_THRESHOLD = 'ffffffc000000000';
+const DEV_THRESHOLD = 'fffff00000000000';
+const WORK_TYPE = {
+  SEND: 'Send',
+  RECEIVE: 'Receive',
+  EPOCH1: 'Epoch1',
+  DEV: 'Dev',
+} as const;
 
-function localComputeToBackendName(compute: LocalCompute): PowBackendNameValue {
-  switch (compute) {
-    case LocalCompute.WEBGPU:
-      return PowBackendName.WEBGPU;
-    case LocalCompute.WEBGL:
-      return PowBackendName.WEBGL;
-    case LocalCompute.WASM:
-      return PowBackendName.WASM;
-  }
+function difficultyToWorkType(difficulty: string): WorkType {
+  const normalized = difficulty.toLowerCase();
+  if (normalized === EPOCH_2_SEND_THRESHOLD) return WORK_TYPE.SEND as WorkType;
+  if (normalized === EPOCH_2_RECEIVE_THRESHOLD) return WORK_TYPE.RECEIVE as WorkType;
+  if (normalized === EPOCH_1_THRESHOLD) return WORK_TYPE.EPOCH1 as WorkType;
+  if (normalized === DEV_THRESHOLD) return WORK_TYPE.DEV as WorkType;
+  return WORK_TYPE.SEND as WorkType;
 }
 
 function computeOptionsFingerprint(options: WorkProviderOptions): string {
   const parts: Record<string, unknown> = {
-    urls: options.urls?.slice().sort() ?? [],
-    defaults: options.defaults?.slice().sort() ?? [],
-    env: options.env ?? null,
-    remotes: options.remotes?.map((r) => r.url).sort() ?? [],
-    localChain: options.localChain ?? DEFAULT_LOCAL_CHAIN,
+    localEngine: options.localEngine?.name ?? 'nano-rspow-node',
   };
 
   const data = JSON.stringify(parts, Object.keys(parts).sort());
@@ -106,34 +93,6 @@ function computeOptionsFingerprint(options: WorkProviderOptions): string {
     hash = ((hash << 5) + hash) ^ data.charCodeAt(i);
   }
   return Math.abs(hash).toString(16);
-}
-
-function localComputeToPlanStep(compute: LocalCompute): WorkPlanStepKind {
-  switch (compute) {
-    case LocalCompute.WEBGPU:
-      return 'webgpu';
-    case LocalCompute.WEBGL:
-      return 'webgl';
-    case LocalCompute.WASM:
-      return 'wasm';
-  }
-}
-
-function planStepToBackendName(kind: WorkPlanStepKind): PowBackendNameValue {
-  switch (kind) {
-    case 'webgpu':
-      return PowBackendName.WEBGPU;
-    case 'webgl':
-      return PowBackendName.WEBGL;
-    case 'wasm':
-      return PowBackendName.WASM;
-    case 'remote':
-      throw new Error('remote plan step does not map to a local backend');
-  }
-}
-
-function isLocalStepKind(kind: WorkPlanStepKind): kind is Exclude<WorkPlanStepKind, 'remote'> {
-  return kind !== 'remote';
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, onTimeout?: () => void): Promise<T> {
@@ -158,70 +117,39 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, onTimeout?: () =
 
 export class WorkProvider {
   private readonly options: WorkProviderOptions;
-  private readonly remotePool: HttpEndpointPool | null;
-  private readonly warn: (message: string) => void;
   private readonly localTimeoutMs: number;
+  private readonly localEngine: LocalPowEngine;
   private readonly cacheStore: WorkPlanCacheStore;
   private lastGenerationTrace: WorkGenerationTrace | null = null;
-  private lastProbeResults: WorkProbeResult[] = [];
   private executionPlan: WorkExecutionPlan;
   private probePromise: Promise<WorkExecutionPlan> | null = null;
   private readonly preferLocalAboveMhs: number;
 
   private constructor(options: WorkProviderOptions, cacheStore: WorkPlanCacheStore) {
     this.options = options;
-    this.warn = options.warn ?? ((message: string) => console.warn(`[nano-core] ${message}`));
     this.localTimeoutMs = DEFAULT_LOCAL_TIMEOUT_MS;
+    this.localEngine = options.localEngine ?? new NanoRspowEngine();
     this.cacheStore = cacheStore;
     this.preferLocalAboveMhs = options.profiler?.preferLocalAboveMhs ?? 0;
-
-    const hasRemotePool = (options.urls && options.urls.length > 0) || options.env || (options.defaults && options.defaults.length > 0);
-    if (!hasRemotePool) {
-      this.remotePool = null;
-    } else {
-      const remotePoolOptions: HttpPoolOptions = {
-        kind: 'work',
-        defaults: options.defaults ?? [],
-        transportPolicy: 'bearer-and-json-body-key',
-        ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
-      };
-      if (options.urls && options.urls.length > 0) remotePoolOptions.urls = options.urls;
-      if (options.env) remotePoolOptions.env = options.env;
-      if (options.warn) remotePoolOptions.warn = options.warn;
-      if (options.onActiveEndpointChange) remotePoolOptions.onActiveEndpointChange = options.onActiveEndpointChange;
-      this.remotePool = new HttpEndpointPool(remotePoolOptions);
-    }
-
     this.executionPlan = this.buildDefaultPlan();
   }
 
-  public static auto(options: WorkProviderOptions): WorkProvider {
+  public static auto(options: WorkProviderOptions = {}): WorkProvider {
     const fingerprint = computeOptionsFingerprint(options);
     const cacheStrategy = options.profiler?.cacheStrategy ?? 'memory';
     const cacheStore = createCacheStore(cacheStrategy, fingerprint);
     return new WorkProvider(options, cacheStore);
   }
 
-  public getRemoteAuditReport(): EndpointAuditRecord[] {
-    return this.remotePool?.getAuditReport() ?? [];
-  }
-
   public getAuditReport(): {
-    remotePool: EndpointAuditRecord[];
-    remotes: Array<{ url: string; timeoutMs: number }>;
-    localChain: LocalCompute[];
     profiler: WorkProviderOptions['profiler'] | 'default';
-    localBackend: PowBackendNameValue | null;
+    localBackend: string | null;
     lastGenerationTrace: WorkGenerationTrace | null;
     executionPlan: WorkExecutionPlan;
   } {
-    const localStep = this.lastGenerationTrace?.mode === 'local' ? this.lastGenerationTrace.backend ?? null : null;
     return {
-      remotePool: this.getRemoteAuditReport(),
-      remotes: this.options.remotes?.map((remote) => ({ url: remote.url, timeoutMs: remote.timeoutMs })) ?? [],
-      localChain: this.options.localChain ?? DEFAULT_LOCAL_CHAIN,
       profiler: this.options.profiler ?? 'default',
-      localBackend: localStep,
+      localBackend: this.lastGenerationTrace?.backend ?? null,
       lastGenerationTrace: this.lastGenerationTrace,
       executionPlan: this.executionPlan,
     };
@@ -230,19 +158,18 @@ export class WorkProvider {
   public async calibrate(): Promise<WorkCalibrationProfile> {
     const plan = await this.probe();
     const localProbeDurations = plan.probeResults
-      .filter((result) => result.available && result.kind !== 'remote' && typeof result.durationMs === 'number')
+      .filter((result) => result.available && typeof result.durationMs === 'number')
       .map((result) => result.durationMs as number);
     const bestLocalDuration = localProbeDurations.length > 0 ? Math.min(...localProbeDurations) : 0;
     const measuredMhs = bestLocalDuration > 0 ? Number((1_000 / bestLocalDuration).toFixed(2)) : 0;
 
     return {
       measuredMhs,
-      activeStrategy: plan.source === 'probe' ? 'planned' : 'remote-first',
+      activeStrategy: plan.source === 'probe' ? 'planned' : 'local',
     };
   }
 
   public async probe(): Promise<WorkExecutionPlan> {
-    await ensureWebGPU();
     const cached = this.cacheStore.read();
     if (cached) {
       this.executionPlan = cached;
@@ -265,70 +192,32 @@ export class WorkProvider {
   }
 
   private buildDefaultPlan(): WorkExecutionPlan {
-    const localChain = this.options.localChain ?? DEFAULT_LOCAL_CHAIN;
-    const steps: WorkPlanStep[] = [];
-    if (this.remotePool) {
-      steps.push({ kind: 'remote' });
-    }
-    for (const compute of localChain) {
-      steps.push({ kind: localComputeToPlanStep(compute) });
-    }
-
     return {
       source: 'default',
-      steps,
-      disabledLocalBackends: [],
+      steps: [{ kind: 'local' }],
+      disabledLocalEngines: [],
       probeResults: [],
     };
   }
 
-  private createLocalPowService(backend: PowBackendNameValue): PowService {
-    const disabledBackends = Object.values(PowBackendName).filter((candidate) => candidate !== backend);
-    return new PowService({ disabledBackends });
-  }
-
-  private async probeRemote(): Promise<WorkProbeResult> {
-    if (!this.remotePool) {
-      return { kind: 'remote', available: false, reason: 'remote pool not configured' };
-    }
-
+  private async probeLocalEngine(): Promise<WorkProbeResult> {
     const startedAt = performance.now();
     try {
-      await this.remotePool.postJson<{ node_vendor?: string }>({ action: 'version' });
-      return {
-        kind: 'remote',
-        available: true,
-        durationMs: performance.now() - startedAt,
-      };
-    } catch (error) {
-      return {
-        kind: 'remote',
-        available: false,
-        reason: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  private async probeLocalBackend(compute: LocalCompute): Promise<WorkProbeResult> {
-    const backend = localComputeToBackendName(compute);
-    const startedAt = performance.now();
-    const powService = this.createLocalPowService(backend);
-
-    try {
-      await powService.ready;
-      await withTimeout(
-        powService.getProofOfWork({ hash: PROBE_HASH, threshold: PROBE_DIFFICULTY }),
+      const work = await withTimeout(
+        this.localEngine.generate(PROBE_HASH, PROBE_DIFFICULTY),
         this.localTimeoutMs,
-        () => powService.cancel(),
       );
+      if (!this.localEngine.validate(PROBE_HASH, work, PROBE_DIFFICULTY)) {
+        throw new Error('local engine generated invalid work');
+      }
       return {
-        kind: localComputeToPlanStep(compute),
+        kind: 'local',
         available: true,
         durationMs: performance.now() - startedAt,
       };
     } catch (error) {
       return {
-        kind: localComputeToPlanStep(compute),
+        kind: 'local',
         available: false,
         reason: error instanceof Error ? error.message : String(error),
       };
@@ -336,141 +225,43 @@ export class WorkProvider {
   }
 
   private buildPlanFromProbeResults(results: WorkProbeResult[]): WorkExecutionPlan {
-    const remote = results.find((result) => result.kind === 'remote');
-    const locals = results.filter((result): result is WorkProbeResult & { kind: Exclude<WorkPlanStepKind, 'remote'> } => isLocalStepKind(result.kind));
-    const availableLocals = locals
-      .filter((result) => result.available)
-      .sort((a, b) => (a.durationMs ?? Number.POSITIVE_INFINITY) - (b.durationMs ?? Number.POSITIVE_INFINITY));
-    const disabledLocalBackends = locals
-      .filter((result) => !result.available)
-      .map((result) => planStepToBackendName(result.kind));
+    const local = results.find((result) => result.kind === 'local');
+    const disabledLocalEngines = local?.available === false ? [this.localEngine.name] : [];
 
-    if (availableLocals.length === 0) {
-      if (remote?.available) {
-        return { source: 'probe', steps: [{ kind: 'remote' }], disabledLocalBackends, probeResults: results };
-      }
+    if (!local?.available) {
       return this.buildDefaultPlan();
     }
 
-    const threshold = this.preferLocalAboveMhs;
-
-    if (threshold === 0) {
-      const steps: WorkPlanStep[] = [];
-      steps.push({ kind: availableLocals[0].kind });
-      if (remote?.available) {
-        steps.push({ kind: 'remote' });
-      }
-      for (const local of availableLocals.slice(1)) {
-        steps.push({ kind: local.kind });
-      }
-      return { source: 'probe', steps, disabledLocalBackends, probeResults: results };
-    }
-
-    const fastLocals: WorkProbeResult[] = [];
-    const slowLocals: WorkProbeResult[] = [];
-
-    for (const local of availableLocals) {
-      const mhs = 1000 / (local.durationMs ?? Number.POSITIVE_INFINITY);
-      if (mhs >= threshold) {
-        fastLocals.push(local);
-      } else {
-        slowLocals.push(local);
-      }
-    }
-
-    const steps: WorkPlanStep[] = [];
-
-    if (fastLocals.length > 0) {
-      for (const local of fastLocals) {
-        steps.push({ kind: local.kind });
-      }
-      if (remote?.available) {
-        steps.push({ kind: 'remote' });
-      }
-      for (const local of slowLocals) {
-        steps.push({ kind: local.kind });
-      }
-    } else {
-      if (remote?.available) {
-        steps.push({ kind: 'remote' });
-      }
-      for (const local of slowLocals) {
-        steps.push({ kind: local.kind });
-      }
-    }
-
-    if (steps.length === 0) {
-      return this.buildDefaultPlan();
-    }
-
-    return { source: 'probe', steps, disabledLocalBackends, probeResults: results };
+    return {
+      source: 'probe',
+      steps: [{ kind: 'local' }],
+      disabledLocalEngines,
+      probeResults: results,
+    };
   }
 
   private async runProbe(): Promise<WorkExecutionPlan> {
-    const localChain = this.options.localChain ?? DEFAULT_LOCAL_CHAIN;
-    const results: WorkProbeResult[] = [];
-
-    results.push(await this.probeRemote());
-    for (const compute of localChain) {
-      results.push(await this.probeLocalBackend(compute));
-    }
-
-    this.lastProbeResults = results;
-    return this.buildPlanFromProbeResults(results);
+    const result = await this.probeLocalEngine();
+    return this.buildPlanFromProbeResults([result]);
   }
 
-  private async generateRemote(hash: string, difficulty: string): Promise<string> {
-    if (!this.remotePool) {
-      throw new Error('Remote work pool is not configured');
+  private async generateLocal(hash: string, difficulty: string): Promise<string> {
+    const work = await withTimeout(this.localEngine.generate(hash, difficulty), this.localTimeoutMs);
+    if (!this.localEngine.validate(hash, work, difficulty)) {
+      throw new Error('Local work generator returned invalid nonce');
     }
-
-    const response = await this.remotePool.postJson<{ work: string }>({
-      action: 'work_generate',
-      hash,
-      difficulty,
-    });
-
-    if (!response.work || response.work === '0000000000000000') {
-      throw new Error('Remote work provider returned invalid/zero nonce');
-    }
-
-    this.lastGenerationTrace = { mode: 'remote' };
-    return response.work;
-  }
-
-  private async generateLocalWithBackend(hash: string, difficulty: string, backend: PowBackendNameValue): Promise<string> {
-    const powService = this.createLocalPowService(backend);
-    await powService.ready;
-    const result = await withTimeout(
-      powService.getProofOfWork({ hash, threshold: difficulty }),
-      this.localTimeoutMs,
-      () => powService.cancel(),
-    );
-    this.lastGenerationTrace = { mode: 'local', backend: result.backend as PowBackendNameValue };
-    return result.proofOfWork;
-  }
-
-  private async executePlan(hash: string, difficulty: string, plan: WorkExecutionPlan): Promise<string> {
-    let lastError: unknown;
-
-    for (const step of plan.steps) {
-      try {
-        if (step.kind === 'remote') {
-          return await this.generateRemote(hash, difficulty);
-        }
-
-        return await this.generateLocalWithBackend(hash, difficulty, planStepToBackendName(step.kind));
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    throw lastError instanceof Error ? lastError : new Error('No work generation strategy succeeded');
+    this.lastGenerationTrace = { mode: 'local', backend: this.localEngine.name };
+    return work;
   }
 
   public async generate(hash: string, difficulty: string): Promise<string> {
     const shouldProbe = this.options.profiler?.mode === 'auto';
     const plan = shouldProbe ? await this.probe() : this.executionPlan;
-    return await this.executePlan(hash, difficulty, plan);
+
+    if (plan.steps.length === 0) {
+      throw new Error('No work generation steps in plan');
+    }
+
+    return await this.generateLocal(hash, difficulty);
   }
 }

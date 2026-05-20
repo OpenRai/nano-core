@@ -1,6 +1,6 @@
 # Transport And Auth
 
-This document defines the `@openrai/nano-core` transport and auth behavior for RPC, WebSocket, and remote work endpoints.
+This document defines the `@openrai/nano-core` transport and auth behavior for RPC and WebSocket endpoints.
 
 ## Goals
 
@@ -18,7 +18,6 @@ These inputs are optional:
 
 - `NANO_RPC_URL`
 - `NANO_WS_URL`
-- `NANO_WORK_URL`
 
 When set, each is parsed as a comma-separated ordered list.
 
@@ -34,28 +33,25 @@ Rules:
 
 When unset, built-in defaults are used.
 
+## Work Generation
+
+All Proof-of-Work is computed locally using the `nano-rspow-node` native engine. There is no remote work pool, no `NANO_WORK_URL`, and no external work server dependency.
+
 ## Built-In Defaults
 
-As of April 2026, `nano-core` should prefer this default ordered RPC/work endpoint set:
+As of May 2026, `nano-core` uses this default ordered RPC/WS endpoint set:
 
-- `https://rpc.nano.to`
-- `https://node.somenano.com/proxy`
-- `https://rainstorm.city/api`
-- `https://nanoslo.0x.no/proxy`
+- RPC: `https://rpc.nano.to`, `https://node.somenano.com/proxy`, `https://rainstorm.city/api`, `https://nanoslo.0x.no/proxy`
+- WS: `wss://rpc.nano.to`
 
-Rationale from current probing:
+Rationale:
 
-- `rpc.nano.to` is the primary default because it is currently the fastest option in the observed set and supports `work_generate`
+- `rpc.nano.to` is the primary default — fastest observed and most reliable
 - `node.somenano.com/proxy` is a strong read-oriented fallback
 - `rainstorm.city/api` is a good secondary read fallback
 - `nanoslo.0x.no/proxy` adds a useful EU option
 
-Implication:
-
-- default RPC pools should use all four in this order
-- default remote work pools should currently use only `https://rpc.nano.to`
-- `node.somenano.com/proxy`, `rainstorm.city/api`, and `nanoslo.0x.no/proxy` should be treated as read-only fallbacks for now, since current probing shows `work_generate` timing out on them
-- defaults are operational policy, not protocol truth, and should be periodically re-evaluated
+Defaults are operational policy, not protocol truth, and should be periodically re-evaluated.
 
 ## Validation
 
@@ -76,17 +72,6 @@ Allowed schemes:
 
 - `ws:`
 - `wss:`
-
-Must have:
-
-- non-empty hostname
-
-### Work endpoints
-
-Allowed schemes:
-
-- `http:`
-- `https:`
 
 Must have:
 
@@ -131,7 +116,7 @@ becomes:
 
 ## Auth Application
 
-### HTTP RPC / work
+### HTTP RPC
 
 Default for query params:
 

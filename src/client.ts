@@ -16,7 +16,6 @@ export interface NanoClientOptions {
   transports?: TransportFallback;
   rpc?: string[];
   ws?: string[];
-  work?: string[];
   workProvider?: WorkProvider;
   warn?: (message: string) => void;
 }
@@ -24,7 +23,6 @@ export interface NanoClientOptions {
 export interface NanoClientActiveEndpoints {
   rpc?: string;
   ws?: string;
-  work?: string;
 }
 
 export interface NanoClientAuditReport {
@@ -60,11 +58,9 @@ export class NanoClient {
       'https://nanoslo.0x.no/proxy',
     ];
     const defaultWs = ['wss://rpc.nano.to'];
-    const defaultWork = ['https://rpc.nano.to'];
     const rpcUrls = options.rpc ?? options.transports?.urls;
     const rpcEnv = process.env['NANO_RPC_URL'];
     const wsEnv = process.env['NANO_WS_URL'];
-    const workEnv = process.env['NANO_WORK_URL'];
 
     const rpcOptions: HttpPoolOptions = {
       kind: 'rpc',
@@ -85,14 +81,7 @@ export class NanoClient {
     if (wsEnv) wsOptions.env = wsEnv;
     this.wsPool = new WsEndpointPool(wsOptions);
 
-    const workOptions: WorkProviderOptions = {
-      defaults: defaultWork,
-      warn,
-      onActiveEndpointChange: forwardEndpointChange,
-    };
-    if (options.work && options.work.length > 0) workOptions.urls = options.work;
-    if (workEnv) workOptions.env = workEnv;
-
+    const workOptions: WorkProviderOptions = { warn };
     this.workProvider = options.workProvider ?? WorkProvider.auto(workOptions);
   }
 
@@ -109,7 +98,6 @@ export class NanoClient {
     return {
       ...(this.activeEndpoints.rpc ? { rpc: this.activeEndpoints.rpc } : {}),
       ...(this.activeEndpoints.ws ? { ws: this.activeEndpoints.ws } : {}),
-      ...(this.activeEndpoints.work ? { work: this.activeEndpoints.work } : {}),
     };
   }
 

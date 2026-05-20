@@ -44,7 +44,7 @@
   ],
   "dependencies": {
     "blakejs": "^1.2.1",
-    "nano-pow-with-fallback": "^1.2.6",
+    "nano-rspow-node": "^0.5.5",
     "nanocurrency": "^2.5.0",
     "webgpu": "^0.4.0"
   },
