@@ -1,4 +1,14 @@
 import { generateWork, validateWork, WorkType } from 'nano-rspow-node';
+import {
+  type BlockSubtype,
+  type StateBlock,
+  type SendBlockWithPoW,
+  type ReceiveBlockWithPoW,
+  type OpenBlockWithPoW,
+  type ChangeBlockWithPoW,
+  type BlockWithPoW,
+  getWorkRoot,
+} from '../primitives/Block.js';
 import { createCacheStore, type WorkPlanCacheStore } from './cache-store.js';
 
 export interface WorkCalibrationProfile {
@@ -74,10 +84,18 @@ const WORK_TYPE = {
 
 function difficultyToWorkType(difficulty: string): WorkType {
   const normalized = difficulty.toLowerCase();
-  if (normalized === EPOCH_2_SEND_THRESHOLD) return WORK_TYPE.SEND as WorkType;
-  if (normalized === EPOCH_2_RECEIVE_THRESHOLD) return WORK_TYPE.RECEIVE as WorkType;
-  if (normalized === EPOCH_1_THRESHOLD) return WORK_TYPE.EPOCH1 as WorkType;
-  if (normalized === DEV_THRESHOLD) return WORK_TYPE.DEV as WorkType;
+  if (normalized === 'send' || normalized === WORK_TYPE.SEND.toLowerCase() || normalized === EPOCH_2_SEND_THRESHOLD) {
+    return WORK_TYPE.SEND as WorkType;
+  }
+  if (normalized === 'receive' || normalized === WORK_TYPE.RECEIVE.toLowerCase() || normalized === EPOCH_2_RECEIVE_THRESHOLD) {
+    return WORK_TYPE.RECEIVE as WorkType;
+  }
+  if (normalized === 'epoch1' || normalized === WORK_TYPE.EPOCH1.toLowerCase() || normalized === EPOCH_1_THRESHOLD) {
+    return WORK_TYPE.EPOCH1 as WorkType;
+  }
+  if (normalized === 'dev' || normalized === WORK_TYPE.DEV.toLowerCase() || normalized === DEV_THRESHOLD) {
+    return WORK_TYPE.DEV as WorkType;
+  }
   return WORK_TYPE.SEND as WorkType;
 }
 
@@ -263,5 +281,29 @@ export class WorkProvider {
     }
 
     return await this.generateLocal(hash, difficulty);
+  }
+
+  public validate(hash: string, work: string, difficulty: string): boolean {
+    return this.localEngine.validate(hash, work, difficulty);
+  }
+
+  public async generateBlockWithPoW(block: StateBlock, subtype: 'send'): Promise<SendBlockWithPoW>;
+  public async generateBlockWithPoW(block: StateBlock, subtype: 'receive'): Promise<ReceiveBlockWithPoW>;
+  public async generateBlockWithPoW(block: StateBlock, subtype: 'open', accountPublicKey?: string): Promise<OpenBlockWithPoW>;
+  public async generateBlockWithPoW(block: StateBlock, subtype: 'change'): Promise<ChangeBlockWithPoW>;
+  public async generateBlockWithPoW(block: StateBlock, subtype: BlockSubtype, accountPublicKey?: string): Promise<BlockWithPoW> {
+    const difficulty = (subtype === 'open' || subtype === 'receive') ? 'Receive' : 'Send';
+    const root = getWorkRoot(block, subtype, accountPublicKey);
+    const work = await this.generate(root, difficulty);
+    return {
+      ...block,
+      work,
+    } as BlockWithPoW;
+  }
+
+  public validateBlockWithPoW(block: BlockWithPoW, subtype: BlockSubtype, accountPublicKey?: string): boolean {
+    const difficulty = (subtype === 'open' || subtype === 'receive') ? 'Receive' : 'Send';
+    const root = getWorkRoot(block, subtype, accountPublicKey);
+    return this.validate(root, block.work, difficulty);
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@openrai/nano-core",
-  "version": "2.4.11",
+  "version": "3.0.0",
   "description": "Protocol engine for Nano integration ecosystem",
   "repository": "https://github.com/OpenRai/nano-core",
   "type": "module",
@@ -44,13 +44,11 @@
   ],
   "dependencies": {
     "blakejs": "^1.2.1",
-    "nano-rspow-node": "^0.5.5",
-    "nanocurrency": "^2.5.0",
-    "webgpu": "^0.4.0"
+    "nano-rspow-node": "file:/Users/conny/Developer/CasualSecurityInc/nano-rspow/nano-rspow-node",
+    "nanocurrency": "^2.5.0"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "@webgpu/types": "^0.1.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   }
