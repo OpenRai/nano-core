@@ -44,7 +44,7 @@
   ],
   "dependencies": {
     "blakejs": "^1.2.1",
-    "nano-rspow-node": "^0.5.11",
+    "nano-rspow-node": "^0.5.12",
     "nanocurrency": "^2.5.0"
   },
   "devDependencies": {
