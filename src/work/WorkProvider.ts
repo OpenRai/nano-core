@@ -61,6 +61,7 @@ export class NanoRspowEngine implements LocalPowEngine {
 export interface WorkProviderOptions {
   warn?: (message: string) => void;
   localEngine?: LocalPowEngine;
+  localTimeoutMs?: number;
   profiler?: {
     mode: 'manual' | 'auto';
     preferLocalAboveMhs?: number;
@@ -68,7 +69,7 @@ export interface WorkProviderOptions {
   };
 }
 
-const DEFAULT_LOCAL_TIMEOUT_MS = 10_000;
+const DEFAULT_LOCAL_TIMEOUT_MS = 60_000;
 const PROBE_HASH = 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789';
 const PROBE_DIFFICULTY = 'fffffff800000000';
 const EPOCH_2_SEND_THRESHOLD = 'fffffff800000000';
@@ -145,7 +146,7 @@ export class WorkProvider {
 
   private constructor(options: WorkProviderOptions, cacheStore: WorkPlanCacheStore) {
     this.options = options;
-    this.localTimeoutMs = DEFAULT_LOCAL_TIMEOUT_MS;
+    this.localTimeoutMs = options.localTimeoutMs ?? DEFAULT_LOCAL_TIMEOUT_MS;
     this.localEngine = options.localEngine ?? new NanoRspowEngine();
     this.cacheStore = cacheStore;
     this.preferLocalAboveMhs = options.profiler?.preferLocalAboveMhs ?? 0;
