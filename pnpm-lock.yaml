@@ -12,8 +12,8 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1
       nano-rspow-node:
-        specifier: file:/Users/conny/Developer/CasualSecurityInc/nano-rspow/nano-rspow-node
-        version: file:../../../CasualSecurityInc/nano-rspow/nano-rspow-node
+        specifier: ^0.5.11
+        version: 0.5.11
       nanocurrency:
         specifier: ^2.5.0
         version: 2.5.0
@@ -318,8 +318,35 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  nano-rspow-node@file:../../../CasualSecurityInc/nano-rspow/nano-rspow-node:
-    resolution: {directory: ../../../CasualSecurityInc/nano-rspow/nano-rspow-node, type: directory}
+  nano-rspow-node-darwin-arm64@0.5.11:
+    resolution: {integrity: sha512-mKiuMMT3ai2uPD+qQnHaRJOndhfldwnKjr8eLjg25S3u4wQJ1Xa/yFwdej+gPVQgiO+Z01EB8IDFePM196Vvdg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  nano-rspow-node-darwin-x64@0.5.11:
+    resolution: {integrity: sha512-ZP16iWd+8ROqw4fTPv/aftrBgO+jdc93FRXadoDLp9dnrVcjExi8QJvuIXZZdVb0W6QuZQkrbif0qpisVmrhmA==}
+    cpu: [x64]
+    os: [darwin]
+
+  nano-rspow-node-linux-arm64-gnu@0.5.11:
+    resolution: {integrity: sha512-pLVtMvx0IdzbYkhjObafISCbdkOcBJ0R6ObNhW3cap8OWZMsMMKFhptXklXTwZWHS4OlWnumWjEP7TwnKwuWbg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  nano-rspow-node-linux-x64-gnu@0.5.11:
+    resolution: {integrity: sha512-DkrnJY8YCoohRoLyOsWpFu+kjkIB9kGRXX3WRemyAtlUK2fbV+kjbVmmYrMow6JF+N0YFacbZjEKhjkHhKTrnQ==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  nano-rspow-node-win32-x64-msvc@0.5.11:
+    resolution: {integrity: sha512-KYkh+2WU8oaKpV2CsJdz7g5lXI/7Jdc/zANDs5l033JIiUipt10Q0s9PleT/pBBEMFYFhyY6ObNMheeFXAsGGg==}
+    cpu: [x64]
+    os: [win32]
+
+  nano-rspow-node@0.5.11:
+    resolution: {integrity: sha512-68+L+xWK7SeO4qwg0CWhLN26PhOaJ+sOSQ17JpUAIKh+PFud0mYPcDbiUWn7R/QTg9qUNdXmfLRwp43DtrhqIw==}
     hasBin: true
 
   nanocurrency@2.5.0:
@@ -701,7 +728,28 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  nano-rspow-node@file:../../../CasualSecurityInc/nano-rspow/nano-rspow-node: {}
+  nano-rspow-node-darwin-arm64@0.5.11:
+    optional: true
+
+  nano-rspow-node-darwin-x64@0.5.11:
+    optional: true
+
+  nano-rspow-node-linux-arm64-gnu@0.5.11:
+    optional: true
+
+  nano-rspow-node-linux-x64-gnu@0.5.11:
+    optional: true
+
+  nano-rspow-node-win32-x64-msvc@0.5.11:
+    optional: true
+
+  nano-rspow-node@0.5.11:
+    optionalDependencies:
+      nano-rspow-node-darwin-arm64: 0.5.11
+      nano-rspow-node-darwin-x64: 0.5.11
+      nano-rspow-node-linux-arm64-gnu: 0.5.11
+      nano-rspow-node-linux-x64-gnu: 0.5.11
+      nano-rspow-node-win32-x64-msvc: 0.5.11
 
   nanocurrency@2.5.0:
     dependencies:
