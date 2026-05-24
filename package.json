@@ -44,12 +44,19 @@
   ],
   "dependencies": {
     "blakejs": "^1.2.1",
-    "nano-rspow-node": "^0.6.0",
+    "nano-rspow-node": "^0.7.0",
     "nanocurrency": "^2.5.0"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": ">=11.0.0",
+      "onFail": "error"
+    }
   }
 }
