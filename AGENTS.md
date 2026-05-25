@@ -4,6 +4,8 @@
 
 Use **pnpm** exclusively. Do not use npm, yarn, or bun.
 
+**CRITICAL NOTE:** If you encounter errors like `EBADDEVENGINES` or if a script/prompt suggests running `npm install`, it is because in this project we **always use pnpm**.
+
 | Task | Command |
 |------|---------|
 | Install | `pnpm install` |
@@ -24,11 +26,9 @@ The repo uses a GitHub OIDC Trusted Publisher workflow (`.github/workflows/relea
 
 Correct release steps:
 
-1. Bump version: `npm version patch --no-git-tag-version`
-2. Commit the version bump
-3. Tag: `git tag v<X.Y.Z>`
-4. Push: `git push && git push --tags`
-5. **Stop.** The Release workflow on `main` will publish automatically.
+1. Bump version: `pnpm version patch` (commits the bump and creates the tag atomically)
+2. Push: `git push && git push --tags`
+3. **Stop.** The Release workflow on `main` will publish automatically.
 
 Local publish attempts will fail with 404 because your token lacks OIDC Trusted Publisher permissions.
 
