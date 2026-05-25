@@ -1,4 +1,4 @@
-import { generateWork, validateWork, WorkType } from 'nano-rspow-node';
+import { generateWork, validateWork, WorkType, workTypeToHex, type WorkThreshold } from 'nano-rspow-node';
 import {
   type BlockSubtype,
   type StateBlock,
@@ -72,16 +72,19 @@ export interface WorkProviderOptions {
 const DEFAULT_LOCAL_TIMEOUT_MS = 60_000;
 const PROBE_HASH = 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789';
 const PROBE_DIFFICULTY = 'fffffff800000000';
-const EPOCH_2_SEND_THRESHOLD = 'fffffff800000000';
-const EPOCH_2_RECEIVE_THRESHOLD = 'fffffe0000000000';
-const EPOCH_1_THRESHOLD = 'ffffffc000000000';
-const DEV_THRESHOLD = 'fffff00000000000';
+const EPOCH_2_SEND_THRESHOLD = workTypeToHex('Send' as WorkType).toLowerCase();
+const EPOCH_2_RECEIVE_THRESHOLD = workTypeToHex('Receive' as WorkType).toLowerCase();
+const EPOCH_1_THRESHOLD = workTypeToHex('Epoch1' as WorkType).toLowerCase();
+const DEV_THRESHOLD = workTypeToHex('Dev' as WorkType).toLowerCase();
 const WORK_TYPE = {
   SEND: 'Send',
   RECEIVE: 'Receive',
   EPOCH1: 'Epoch1',
   DEV: 'Dev',
 } as const;
+
+export type { WorkThreshold };
+export { WorkType, workTypeToHex };
 
 function difficultyToWorkType(difficulty: string): WorkType {
   const normalized = difficulty.toLowerCase();

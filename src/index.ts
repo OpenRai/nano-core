@@ -1,7 +1,15 @@
 export { NanoAddress } from './primitives/NanoAddress.js';
 export { NanoAmount } from './primitives/NanoAmount.js';
 export { NOMS } from './signing/noms.js';
-export { WorkProvider, NanoRspowEngine, type LocalPowEngine, type WorkProviderOptions } from './work/WorkProvider.js';
+export {
+  WorkProvider,
+  NanoRspowEngine,
+  WorkType,
+  workTypeToHex,
+  type WorkThreshold,
+  type LocalPowEngine,
+  type WorkProviderOptions,
+} from './work/WorkProvider.js';
 export {
   type BlockSubtype,
   type StateBlock,

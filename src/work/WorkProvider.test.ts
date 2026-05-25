@@ -1,10 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkProvider } from './WorkProvider.js';
-import { WorkType, generateWork } from 'nano-rspow-node';
+import { WorkType, generateWork, workTypeToHex } from 'nano-rspow-node';
 vi.mock('nano-rspow-node', () => ({
   WorkType: { Send: 'Send', Receive: 'Receive', Epoch1: 'Epoch1', Dev: 'Dev' },
   generateWork: vi.fn(async () => '1111111111111111'),
   validateWork: vi.fn(() => true),
+  workTypeToHex: vi.fn((wt: string) => {
+    const map: Record<string, string> = {
+      Send: 'fffffff800000000',
+      Receive: 'fffffe0000000000',
+      Epoch1: 'ffffffc000000000',
+      Dev: 'fe00000000000000',
+    };
+    return map[wt] ?? map.Send;
+  }),
 }));
 
 describe('WorkProvider orchestration', () => {
@@ -75,7 +84,7 @@ describe('WorkProvider orchestration', () => {
     await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffff800000000');
     await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffe0000000000');
     await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'ffffffc000000000');
-    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffff00000000000');
+    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fe00000000000000');
 
     expect(vi.mocked(generateWork).mock.calls.map((call) => call[1])).toEqual([
       WorkType.Send,
@@ -83,5 +92,12 @@ describe('WorkProvider orchestration', () => {
       WorkType.Epoch1,
       WorkType.Dev,
     ]);
+  });
+
+  it('exposes authoritative workTypeToHex values from nano-rspow-node', () => {
+    expect(workTypeToHex(WorkType.Send)).toBe('fffffff800000000');
+    expect(workTypeToHex(WorkType.Receive)).toBe('fffffe0000000000');
+    expect(workTypeToHex(WorkType.Epoch1)).toBe('ffffffc000000000');
+    expect(workTypeToHex(WorkType.Dev)).toBe('fe00000000000000');
   });
 });
