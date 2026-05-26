@@ -87,7 +87,39 @@ Current built-in defaults as of May 2026:
 
 - RPC: `https://rpc.nano.to`, `https://node.somenano.com/proxy`, `https://rainstorm.city/api`, `https://nanoslo.0x.no/proxy`
 - WS: `wss://rpc.nano.to`
-- Work: local CPU/GPU via `nano-rspow-node` (no remote work server)
+- Work: local CPU/GPU via `nano-rspow-node` (recommended default; remote work via RPC is also possible — see §1.2)
+
+### 1.2 Custom RPC Calls
+
+`client.rpcPool.postJson()` exposes the pooled HTTP transport for any Nano RPC action — the same failover, backoff, and auth pipeline used internally:
+
+```typescript
+import { NanoClient } from '@openrai/nano-core';
+
+const client = NanoClient.initialize();
+
+// General RPC — any action
+const balance = await client.rpcPool.postJson<{ balance: string }>({
+  action: 'account_balance',
+  account: 'nano_3arg3asgtigae3xckabaaewkx3bzsh7nwz7jkmjos79ihyaxwphhm6qgjps4',
+});
+console.log(balance.balance);
+
+// Remote work generation — good as a fallback when the local engine
+// is unavailable or too slow for your throughput requirements
+const work = await client.rpcPool.postJson<{ work: string }>({
+  action: 'work_generate',
+  hash: '994ED8E50EBF19912F25A1358C2DBEF0C1E1D08610C958EAB6CD7369EE5A2D2F',
+  difficulty: 'fffffff800000000',
+});
+console.log(`Remote work nonce: ${work.work}`);
+```
+
+Local PoW via `nano-rspow-node` is the recommended default for most deployments
+— it avoids network latency and a dependency on the RPC endpoint for block
+processing. Remote `work_generate` via the RPC pool is available when needed
+(e.g., constrained devices, burst throughput), and the decision is entirely the
+consumer's.
 
 ### 2. Zero-Config Prototype Mode
 Out of the box, `NanoClient.initialize()` falls back to default public RPC / WS / work pools and auto-configures the work provider:
@@ -129,8 +161,16 @@ const client = NanoClient.initialize({
 });
 ```
 
-### 4. Isomorphic Work Calibration
-`nano-core` can probe remote and local work capabilities asynchronously, then build an execution plan without doing any heavyweight work in constructors. When `profiler.mode` is `auto`, call `probe()` or `calibrate()` explicitly during startup and reuse the resulting plan for later work generation.
+### 4. Work Strategy & Audit
+
+**Local PoW is the recommended default** — it avoids network round-trips and
+external dependencies for block signing. The `rpcPool` (§1.2) is available for
+remote `work_generate` when needed, but the decision belongs to the consumer.
+
+The profiler can probe local work capabilities asynchronously and build an
+execution plan without doing any heavyweight work in constructors. When
+`profiler.mode` is `auto`, call `probe()` or `calibrate()` during startup and
+reuse the resulting plan for later work generation:
 
 ```typescript
 const plan = await client.workProvider.probe();
@@ -138,6 +178,14 @@ console.log(plan.steps);
 
 const profile = await client.workProvider.calibrate();
 console.log(profile.activeStrategy);
+```
+
+Inspect the active work strategy at any time via `getAuditReport()`:
+
+```typescript
+const audit = client.getAuditReport();
+console.log(audit.workProvider);
+// { profiler: ..., localBackend: ..., lastGenerationTrace: ..., executionPlan: ... }
 ```
 
 ### 5. Precision-Safe Execution
@@ -182,7 +230,7 @@ For collaboration, please refer to the `github.com/OpenRai/nano-core` issues boa
 
 ---
 
-See `docs/architecture/transport-auth.md` for the transport/auth design. More advanced local-vs-remote work profiling is planned but not implemented in the current release.
+See `docs/architecture/transport-auth.md` for the transport/auth design.
 
 ## Release Flow
 
