@@ -18,6 +18,15 @@ export {
   type OpenBlockWithPoW,
   type ChangeBlockWithPoW,
   type BlockWithPoW,
+  type BuildSendBlockInput,
+  type BuildReceiveBlockInput,
+  type BuildChangeBlockInput,
+  buildSendBlock,
+  buildReceiveBlock,
+  buildChangeBlock,
+  serializeStateBlock,
+  stateBlockSigningPayload,
+  hashStateBlock,
   getWorkRoot,
 } from './primitives/Block.js';
 export { NanoClient, TransportFallback, type NanoClientOptions, type NanoClientActiveEndpoints, type NanoClientAuditReport } from './client.js';
