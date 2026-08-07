@@ -26,6 +26,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "pnpm build",
     "test": "vitest run",
     "release": "pnpm publish --access public --no-git-checks"
   },
