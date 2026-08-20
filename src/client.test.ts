@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NanoClient } from './client.js';
 
 vi.mock('nano-rspow-node', () => ({
-  WorkType: { Send: 'Send', Receive: 'Receive', Epoch1: 'Epoch1', Dev: 'Dev' },
+  WorkType: { Send: 'Send', Receive: 'Receive', LegacyEpoch1: 'LegacyEpoch1', Epoch1: 'Epoch1', Dev: 'Dev' },
   generateWork: vi.fn(async () => '1111111111111111'),
   validateWork: vi.fn(() => true),
   workTypeToHex: vi.fn((wt: string) => {
     const map: Record<string, string> = {
       Send: 'fffffff800000000',
       Receive: 'fffffe0000000000',
+      LegacyEpoch1: 'ffffffc000000000',
       Epoch1: 'ffffffc000000000',
       Dev: 'fe00000000000000',
     };

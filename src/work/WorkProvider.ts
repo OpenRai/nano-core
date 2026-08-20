@@ -98,12 +98,12 @@ const PROBE_HASH = 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF012345
 const PROBE_DIFFICULTY = 'fffffff800000000';
 const EPOCH_2_SEND_THRESHOLD = workTypeToHex('Send' as WorkType).toLowerCase();
 const EPOCH_2_RECEIVE_THRESHOLD = workTypeToHex('Receive' as WorkType).toLowerCase();
-const EPOCH_1_THRESHOLD = workTypeToHex('Epoch1' as WorkType).toLowerCase();
+const LEGACY_EPOCH_1_THRESHOLD = workTypeToHex('LegacyEpoch1' as WorkType).toLowerCase();
 const DEV_THRESHOLD = workTypeToHex('Dev' as WorkType).toLowerCase();
 const WORK_TYPE = {
   SEND: 'Send',
   RECEIVE: 'Receive',
-  EPOCH1: 'Epoch1',
+  LEGACY_EPOCH1: 'LegacyEpoch1',
   DEV: 'Dev',
 } as const;
 
@@ -118,8 +118,14 @@ function difficultyToWorkType(difficulty: string): WorkType {
   if (normalized === 'receive' || normalized === WORK_TYPE.RECEIVE.toLowerCase() || normalized === EPOCH_2_RECEIVE_THRESHOLD) {
     return WORK_TYPE.RECEIVE as WorkType;
   }
-  if (normalized === 'epoch1' || normalized === WORK_TYPE.EPOCH1.toLowerCase() || normalized === EPOCH_1_THRESHOLD) {
-    return WORK_TYPE.EPOCH1 as WorkType;
+  if (
+    normalized === 'legacyepoch1' ||
+    normalized === 'legacy-epoch1' ||
+    normalized === 'epoch1' ||
+    normalized === WORK_TYPE.LEGACY_EPOCH1.toLowerCase() ||
+    normalized === LEGACY_EPOCH_1_THRESHOLD
+  ) {
+    return WORK_TYPE.LEGACY_EPOCH1 as WorkType;
   }
   if (normalized === 'dev' || normalized === WORK_TYPE.DEV.toLowerCase() || normalized === DEV_THRESHOLD) {
     return WORK_TYPE.DEV as WorkType;

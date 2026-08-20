@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearPowTuningCache, recommendLocalPow, WorkProvider } from './WorkProvider.js';
 import { WorkType, generateWork, workTypeToHex } from 'nano-rspow-node';
 vi.mock('nano-rspow-node', () => ({
-  WorkType: { Send: 'Send', Receive: 'Receive', Epoch1: 'Epoch1', Dev: 'Dev' },
+  WorkType: { Send: 'Send', Receive: 'Receive', LegacyEpoch1: 'LegacyEpoch1', Epoch1: 'Epoch1', Dev: 'Dev' },
   generateWork: vi.fn(async () => '1111111111111111'),
   validateWork: vi.fn(() => true),
   recommendLocalPow: vi.fn(() => true),
@@ -11,6 +11,7 @@ vi.mock('nano-rspow-node', () => ({
     const map: Record<string, string> = {
       Send: 'fffffff800000000',
       Receive: 'fffffe0000000000',
+      LegacyEpoch1: 'ffffffc000000000',
       Epoch1: 'ffffffc000000000',
       Dev: 'fe00000000000000',
     };
@@ -100,7 +101,7 @@ describe('WorkProvider orchestration', () => {
     expect(vi.mocked(generateWork).mock.calls.map((call) => call[1])).toEqual([
       WorkType.Send,
       WorkType.Receive,
-      WorkType.Epoch1,
+      WorkType.LegacyEpoch1,
       WorkType.Dev,
     ]);
   });
@@ -108,7 +109,7 @@ describe('WorkProvider orchestration', () => {
   it('exposes authoritative workTypeToHex values from nano-rspow-node', () => {
     expect(workTypeToHex(WorkType.Send)).toBe('fffffff800000000');
     expect(workTypeToHex(WorkType.Receive)).toBe('fffffe0000000000');
-    expect(workTypeToHex(WorkType.Epoch1)).toBe('ffffffc000000000');
+    expect(workTypeToHex(WorkType.LegacyEpoch1)).toBe('ffffffc000000000');
     expect(workTypeToHex(WorkType.Dev)).toBe('fe00000000000000');
   });
 
