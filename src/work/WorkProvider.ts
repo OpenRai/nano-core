@@ -1,4 +1,12 @@
-import { generateWork, validateWork, WorkType, workTypeToHex, type WorkThreshold } from 'nano-rspow-node';
+import {
+  generateWork,
+  validateWork,
+  WorkType,
+  workTypeToHex,
+  recommendLocalPow as nativeRecommendLocalPow,
+  clearPowTuningCache as nativeClearPowTuningCache,
+  type WorkThreshold,
+} from 'nano-rspow-node';
 import {
   type BlockSubtype,
   type StateBlock,
@@ -55,6 +63,22 @@ export class NanoRspowEngine implements LocalPowEngine {
   public validate(hash: string, work: string, difficulty: string): boolean {
     return validateWork(hash, work, difficultyToWorkType(difficulty));
   }
+}
+
+/**
+ * Return the native engine's cached recommendation for local PoW.
+ *
+ * This is an advisory capability check for consumers choosing between local
+ * work and a remote work service. It is not required for generating valid
+ * Nano work.
+ */
+export function recommendLocalPow(): boolean {
+  return nativeRecommendLocalPow();
+}
+
+/** Clear the native engine's persisted local-PoW tuning cache. */
+export function clearPowTuningCache(): boolean {
+  return nativeClearPowTuningCache();
 }
 
 
@@ -161,6 +185,20 @@ export class WorkProvider {
     const cacheStrategy = options.profiler?.cacheStrategy ?? 'memory';
     const cacheStore = createCacheStore(cacheStrategy, fingerprint);
     return new WorkProvider(options, cacheStore);
+  }
+
+  /**
+   * Create a local-only work executor.
+   *
+   * Route selection belongs to the consumer. This factory deliberately skips
+   * the optional probe/calibration path and only executes and validates local
+   * work through the configured engine.
+   */
+  public static local(options: Omit<WorkProviderOptions, 'profiler'> = {}): WorkProvider {
+    return WorkProvider.auto({
+      ...options,
+      profiler: { mode: 'manual', cacheStrategy: 'memory' },
+    });
   }
 
   public getAuditReport(): {

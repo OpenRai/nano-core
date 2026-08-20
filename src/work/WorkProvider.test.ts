@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { WorkProvider } from './WorkProvider.js';
+import { clearPowTuningCache, recommendLocalPow, WorkProvider } from './WorkProvider.js';
 import { WorkType, generateWork, workTypeToHex } from 'nano-rspow-node';
 vi.mock('nano-rspow-node', () => ({
   WorkType: { Send: 'Send', Receive: 'Receive', Epoch1: 'Epoch1', Dev: 'Dev' },
   generateWork: vi.fn(async () => '1111111111111111'),
   validateWork: vi.fn(() => true),
+  recommendLocalPow: vi.fn(() => true),
+  clearPowTuningCache: vi.fn(() => true),
   workTypeToHex: vi.fn((wt: string) => {
     const map: Record<string, string> = {
       Send: 'fffffff800000000',
@@ -31,6 +33,15 @@ describe('WorkProvider orchestration', () => {
 
     expect(work).toBe('1111111111111111');
     expect(provider.getAuditReport().lastGenerationTrace).toEqual({ mode: 'local', backend: 'nano-rspow-node' });
+  });
+
+  it('local creates an executor without probing for a route', async () => {
+    const provider = WorkProvider.local();
+
+    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffff800000000');
+
+    expect(provider.getAuditReport().executionPlan.source).toBe('default');
+    expect(provider.getAuditReport().profiler).toEqual({ mode: 'manual', cacheStrategy: 'memory' });
   });
 
   it('runs work probing as a single-flight async operation', async () => {
@@ -99,5 +110,13 @@ describe('WorkProvider orchestration', () => {
     expect(workTypeToHex(WorkType.Receive)).toBe('fffffe0000000000');
     expect(workTypeToHex(WorkType.Epoch1)).toBe('ffffffc000000000');
     expect(workTypeToHex(WorkType.Dev)).toBe('fe00000000000000');
+  });
+
+  it('exposes the native local-PoW recommendation through nano-core', () => {
+    expect(recommendLocalPow()).toBe(true);
+  });
+
+  it('exposes native PoW tuning-cache reset through nano-core', () => {
+    expect(clearPowTuningCache()).toBe(true);
   });
 });

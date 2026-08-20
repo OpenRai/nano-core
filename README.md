@@ -161,11 +161,25 @@ const client = NanoClient.initialize({
 });
 ```
 
+When the consumer has already selected local work, use `WorkProvider.local()`
+to make that boundary explicit. It executes and validates local work without
+running the optional route-selection probe:
+
+```typescript
+const localWork = WorkProvider.local({ localTimeoutMs: 60_000 });
+const work = await localWork.generate(hash, 'Send');
+```
+
 ### 4. Work Strategy & Audit
 
 **Local PoW is the recommended default** — it avoids network round-trips and
 external dependencies for block signing. The `rpcPool` (§1.2) is available for
 remote `work_generate` when needed, but the decision belongs to the consumer.
+
+`recommendLocalPow()` provides a cached local-performance recommendation for
+consumers that need to choose between those routes. It does not perform route
+selection and it does not replace `WorkProvider.local()`, which is the
+local-work executor.
 
 The profiler can probe local work capabilities asynchronously and build an
 execution plan without doing any heavyweight work in constructors. When

@@ -4,6 +4,8 @@ export { NOMS } from './signing/noms.js';
 export {
   WorkProvider,
   NanoRspowEngine,
+  recommendLocalPow,
+  clearPowTuningCache,
   WorkType,
   workTypeToHex,
   type WorkThreshold,
