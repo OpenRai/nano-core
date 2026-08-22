@@ -10,8 +10,11 @@ export {
   workTypeToHex,
   type WorkThreshold,
   type LocalPowEngine,
+  type RemotePowEngine,
+  type WorkRoute,
   type WorkProviderOptions,
 } from './work/WorkProvider.js';
+export { NanoWallet, type HydrateWalletOptions } from './wallet/NanoWallet.js';
 export {
   type BlockSubtype,
   type StateBlock,

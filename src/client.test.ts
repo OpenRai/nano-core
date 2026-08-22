@@ -5,6 +5,8 @@ vi.mock('nano-rspow-node', () => ({
   WorkType: { Send: 'Send', Receive: 'Receive', LegacyEpoch1: 'LegacyEpoch1', Epoch1: 'Epoch1', Dev: 'Dev' },
   generateWork: vi.fn(async () => '1111111111111111'),
   validateWork: vi.fn(() => true),
+  recommendLocalPow: vi.fn(() => true),
+  clearPowTuningCache: vi.fn(() => true),
   workTypeToHex: vi.fn((wt: string) => {
     const map: Record<string, string> = {
       Send: 'fffffff800000000',
@@ -83,6 +85,23 @@ describe('NanoClient endpoint observation', () => {
 
     expect(events).toEqual([]);
     expect(client.getActiveEndpoints()).toEqual({});
+  });
+
+  it('routes remote work through the work pool and tracks the selected endpoint', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response('unavailable', { status: 503, statusText: 'Unavailable' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ work: '1111111111111111' }), { status: 200 }));
+    const client = NanoClient.initialize({
+      work: ['https://work-one.example.com', 'https://work-two.example.com'],
+      workRouting: { selectRoute: () => 'remote' },
+    });
+
+    await expect(client.workProvider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'send'))
+      .resolves.toBe('1111111111111111');
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(client.getActiveEndpoints()).toEqual({ work: 'https://work-two.example.com/' });
+    expect(client.getAuditReport().work).toHaveLength(2);
   });
 
   it('supports unsubscribing endpoint listeners', async () => {

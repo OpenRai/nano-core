@@ -18,6 +18,7 @@ These inputs are optional:
 
 - `NANO_RPC_URL`
 - `NANO_WS_URL`
+- `NANO_WORK_URL`
 
 When set, each is parsed as a comma-separated ordered list.
 
@@ -31,27 +32,22 @@ Rules:
 - permanently drop invalid entries with a warning
 - throw if no valid endpoints remain
 
-When unset, built-in defaults are used.
+When `NANO_RPC_URL` or `NANO_WS_URL` is unset, the corresponding built-in defaults are used. `NANO_WORK_URL` has no built-in default.
 
 ## Work Generation
 
-All Proof-of-Work is computed locally using the `nano-rspow-node` native engine. There is no remote work pool, no `NANO_WORK_URL`, and no external work server dependency.
+`nano-core` uses `nano-rspow-node` for local work and validation. `WorkProvider.auto()` follows the native persisted recommendation. If the selected route is remote, `NANO_WORK_URL` or `NanoClient.initialize({ work })` must provide one or more HTTP work endpoints. The client sends Nano RPC `work_generate` requests through a separate normalized work pool.
+
+There are no built-in remote work defaults. If remote work is selected and every configured endpoint fails, generation fails unless the caller explicitly enables local fallback.
 
 ## Built-In Defaults
 
-As of May 2026, `nano-core` uses this default ordered RPC/WS endpoint set:
+`nano-core` uses this default ordered RPC/WS endpoint set:
 
 - RPC: `https://rpc.nano.to`, `https://node.somenano.com/proxy`, `https://rainstorm.city/api`, `https://nanoslo.0x.no/proxy`
 - WS: `wss://rpc.nano.to`
 
-Rationale:
-
-- `rpc.nano.to` is the primary default — fastest observed and most reliable
-- `node.somenano.com/proxy` is a strong read-oriented fallback
-- `rainstorm.city/api` is a good secondary read fallback
-- `nanoslo.0x.no/proxy` adds a useful EU option
-
-Defaults are operational policy, not protocol truth, and should be periodically re-evaluated.
+Defaults are operational policy, not protocol truth. Deployments that need stable upstream commitments should configure their own endpoint lists.
 
 ## Validation
 
@@ -162,7 +158,7 @@ Examples:
 
 ## Pooling And Failover
 
-Each transport kind has its own endpoint pool.
+Each configured transport kind has its own endpoint pool.
 
 Tracked per endpoint:
 
