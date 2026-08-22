@@ -1,6 +1,6 @@
 import { HttpEndpointPool, type HttpPoolOptions } from './transport/http.js';
 import { WsEndpointPool, type WsPoolOptions } from './transport/ws.js';
-import { WorkProvider, WorkType, workTypeToHex, type RemotePowEngine, type WorkRoute } from './work/WorkProvider.js';
+import { WorkProvider, type PowEngine, type RemotePowEngine, type WorkRoute } from './work/WorkProvider.js';
 import type { EndpointActivityEvent, EndpointAuditRecord, EndpointKind } from './transport/types.js';
 import { NanoWallet, type HydrateWalletOptions } from './wallet/NanoWallet.js';
 
@@ -19,6 +19,8 @@ export interface NanoClientOptions {
   ws?: string[];
   work?: string[];
   workProvider?: WorkProvider;
+  /** A caller-supplied local engine. Runtime facades provide this automatically. */
+  powEngine?: PowEngine;
   workRouting?: {
     selectRoute?: () => WorkRoute;
     onRemoteFailure?: 'error' | 'local';
@@ -68,8 +70,9 @@ export class NanoClient {
     ];
     const defaultWs = ['wss://rpc.nano.to'];
     const rpcUrls = options.rpc ?? options.transports?.urls;
-    const rpcEnv = process.env['NANO_RPC_URL'];
-    const wsEnv = process.env['NANO_WS_URL'];
+    const environment = typeof process === 'undefined' ? undefined : process.env;
+    const rpcEnv = environment?.['NANO_RPC_URL'];
+    const wsEnv = environment?.['NANO_WS_URL'];
 
     const rpcOptions: HttpPoolOptions = {
       kind: 'rpc',
@@ -90,7 +93,7 @@ export class NanoClient {
     if (wsEnv) wsOptions.env = wsEnv;
     this.wsPool = new WsEndpointPool(wsOptions);
 
-    const workEnv = process.env['NANO_WORK_URL'];
+    const workEnv = environment?.['NANO_WORK_URL'];
     const hasConfiguredWork = (options.work?.length ?? 0) > 0 || Boolean(workEnv);
     if (options.workProvider && ((options.work?.length ?? 0) > 0 || options.workRouting)) {
       throw new Error('workProvider cannot be combined with work or workRouting options');
@@ -109,16 +112,17 @@ export class NanoClient {
 
     const remoteEngine: RemotePowEngine | undefined = this.workPool ? {
       name: 'rpc-work',
-      generate: async (hash, workType) => {
+      generate: async (hash, threshold) => {
         const response = await this.workPool!.postJson<{ work: string }>({
           action: 'work_generate',
           hash,
-          difficulty: workTypeToHex(workType as WorkType),
+          difficulty: threshold,
         });
         return response.work;
       },
     } : undefined;
     this.workProvider = options.workProvider ?? WorkProvider.auto({
+      ...(options.powEngine ? { localEngine: options.powEngine } : {}),
       ...(remoteEngine ? { remoteEngine } : {}),
       ...(options.workRouting?.selectRoute ? { selectRoute: options.workRouting.selectRoute } : {}),
       ...(options.workRouting?.onRemoteFailure ? { onRemoteFailure: options.workRouting.onRemoteFailure } : {}),

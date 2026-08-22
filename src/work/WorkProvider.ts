@@ -1,12 +1,3 @@
-import {
-  generateWork,
-  validateWork,
-  WorkType,
-  workTypeToHex,
-  recommendLocalPow as nativeRecommendLocalPow,
-  clearPowTuningCache as nativeClearPowTuningCache,
-  type WorkThreshold,
-} from 'nano-rspow-node';
 import type { PowEngine } from '@openrai/nano-pow-contract';
 import {
   type BlockSubtype,
@@ -32,7 +23,7 @@ export type LocalPowEngine = PowEngine;
 
 export interface RemotePowEngine {
   readonly name: string;
-  generate(hash: string, workType: WorkType): Promise<string>;
+  generate(hash: string, difficulty: string): Promise<string>;
 }
 
 export interface WorkProviderOptions {
@@ -44,51 +35,30 @@ export interface WorkProviderOptions {
 }
 
 const DEFAULT_LOCAL_TIMEOUT_MS = 60_000;
-const WORK_TYPE = {
-  Send: 'Send',
-  Receive: 'Receive',
-  LegacyEpoch1: 'LegacyEpoch1',
-  Dev: 'Dev',
+export const WorkDifficulty = {
+  Send: 'send',
+  Receive: 'receive',
+  LegacyEpoch1: 'legacy-epoch1',
+  Dev: 'dev',
 } as const;
-const EPOCH_2_SEND_THRESHOLD = workTypeToHex(WORK_TYPE.Send as WorkType).toLowerCase();
-const EPOCH_2_RECEIVE_THRESHOLD = workTypeToHex(WORK_TYPE.Receive as WorkType).toLowerCase();
-const LEGACY_EPOCH_1_THRESHOLD = workTypeToHex(WORK_TYPE.LegacyEpoch1 as WorkType).toLowerCase();
-const DEV_THRESHOLD = workTypeToHex(WORK_TYPE.Dev as WorkType).toLowerCase();
+export type WorkDifficulty = (typeof WorkDifficulty)[keyof typeof WorkDifficulty];
 
-export type { WorkThreshold };
+const THRESHOLDS: Record<WorkDifficulty, string> = {
+  [WorkDifficulty.Send]: 'fffffff800000000',
+  [WorkDifficulty.Receive]: 'fffffe0000000000',
+  [WorkDifficulty.LegacyEpoch1]: 'ffffffc000000000',
+  [WorkDifficulty.Dev]: 'fe00000000000000',
+};
+
 export type { PowEngine } from '@openrai/nano-pow-contract';
-export { WorkType, workTypeToHex };
 
-export class NanoRspowEngine implements LocalPowEngine {
-  public readonly name = 'nano-rspow-node';
-
-  public async generate(hash: string, difficulty: string): Promise<string> {
-    return await generateWork(hash, difficultyToWorkType(difficulty));
-  }
-
-  public validate(hash: string, work: string, difficulty: string): boolean {
-    return validateWork(hash, work, difficultyToWorkType(difficulty));
-  }
-}
-
-/** Return the native engine's persisted local-work recommendation. */
-export function recommendLocalPow(): boolean {
-  return nativeRecommendLocalPow();
-}
-
-/** Clear the native engine's persisted local-work recommendation. */
-export function clearPowTuningCache(): boolean {
-  return nativeClearPowTuningCache();
-}
-
-function difficultyToWorkType(difficulty: string): WorkType {
+/** Convert a named Nano work difficulty (or its threshold) to a threshold. */
+export function workDifficultyToThreshold(difficulty: string): string {
   const normalized = difficulty.toLowerCase();
-  if (normalized === 'send' || normalized === EPOCH_2_SEND_THRESHOLD) return WORK_TYPE.Send as WorkType;
-  if (normalized === 'receive' || normalized === EPOCH_2_RECEIVE_THRESHOLD) return WORK_TYPE.Receive as WorkType;
-  if (normalized === 'legacyepoch1' || normalized === 'legacy-epoch1' || normalized === 'epoch1' || normalized === LEGACY_EPOCH_1_THRESHOLD) {
-    return WORK_TYPE.LegacyEpoch1 as WorkType;
-  }
-  if (normalized === 'dev' || normalized === DEV_THRESHOLD) return WORK_TYPE.Dev as WorkType;
+  if (normalized === WorkDifficulty.Send || normalized === THRESHOLDS[WorkDifficulty.Send]) return THRESHOLDS[WorkDifficulty.Send];
+  if (normalized === WorkDifficulty.Receive || normalized === THRESHOLDS[WorkDifficulty.Receive]) return THRESHOLDS[WorkDifficulty.Receive];
+  if (normalized === 'legacyepoch1' || normalized === WorkDifficulty.LegacyEpoch1 || normalized === 'epoch1' || normalized === THRESHOLDS[WorkDifficulty.LegacyEpoch1]) return THRESHOLDS[WorkDifficulty.LegacyEpoch1];
+  if (normalized === WorkDifficulty.Dev || normalized === THRESHOLDS[WorkDifficulty.Dev]) return THRESHOLDS[WorkDifficulty.Dev];
   throw new Error(`Unsupported Nano work difficulty: ${difficulty}`);
 }
 
@@ -110,7 +80,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 export class WorkProvider {
   private readonly localTimeoutMs: number;
-  private readonly localEngine: LocalPowEngine;
+  private readonly localEngine: LocalPowEngine | null;
   private readonly remoteEngine: RemotePowEngine | null;
   private readonly selectRoute: (() => WorkRoute) | null;
   private readonly onRemoteFailure: 'error' | 'local';
@@ -118,7 +88,7 @@ export class WorkProvider {
 
   private constructor(options: WorkProviderOptions) {
     this.localTimeoutMs = options.localTimeoutMs ?? DEFAULT_LOCAL_TIMEOUT_MS;
-    this.localEngine = options.localEngine ?? new NanoRspowEngine();
+    this.localEngine = options.localEngine ?? null;
     this.remoteEngine = options.remoteEngine ?? null;
     this.selectRoute = options.selectRoute ?? null;
     this.onRemoteFailure = options.onRemoteFailure ?? 'error';
@@ -129,7 +99,7 @@ export class WorkProvider {
   }
 
   /** Create an executor that always computes work locally. */
-  public static local(options: Omit<WorkProviderOptions, 'remoteEngine' | 'selectRoute' | 'onRemoteFailure'> = {}): WorkProvider {
+  public static local(options: Omit<WorkProviderOptions, 'remoteEngine' | 'selectRoute' | 'onRemoteFailure'>): WorkProvider {
     return new WorkProvider({ ...options, selectRoute: () => 'local' });
   }
 
@@ -146,8 +116,11 @@ export class WorkProvider {
   }
 
   private async generateLocal(hash: string, difficulty: string, fallbackFromRemote = false): Promise<string> {
-    const work = await withTimeout(this.localEngine.generate(hash, difficulty), this.localTimeoutMs);
-    if (!this.localEngine.validate(hash, work, difficulty)) {
+    if (!this.localEngine) throw new Error('Local work was selected but no local PoW engine is configured');
+    await this.localEngine.ready?.();
+    const threshold = workDifficultyToThreshold(difficulty);
+    const work = await withTimeout(this.localEngine.generate(hash, threshold), this.localTimeoutMs);
+    if (!this.localEngine.validate(hash, work, threshold)) {
       throw new Error('Local work generator returned invalid nonce');
     }
     this.lastGenerationTrace = { mode: 'local', backend: this.localEngine.name, fallbackFromRemote };
@@ -159,8 +132,11 @@ export class WorkProvider {
       throw new Error('Remote work was selected but no work endpoints are configured');
     }
 
-    const work = await this.remoteEngine.generate(hash, difficultyToWorkType(difficulty));
-    if (!this.localEngine.validate(hash, work, difficulty)) {
+    if (!this.localEngine) throw new Error('Remote work requires a local PoW engine to validate the returned nonce');
+    await this.localEngine.ready?.();
+    const threshold = workDifficultyToThreshold(difficulty);
+    const work = await this.remoteEngine.generate(hash, threshold);
+    if (!this.localEngine.validate(hash, work, threshold)) {
       throw new Error('Remote work generator returned invalid nonce');
     }
     this.lastGenerationTrace = { mode: 'remote', backend: this.remoteEngine.name, fallbackFromRemote: false };
@@ -168,7 +144,7 @@ export class WorkProvider {
   }
 
   public async generate(hash: string, difficulty: string): Promise<string> {
-    const route = this.selectRoute ? this.selectRoute() : (recommendLocalPow() ? 'local' : 'remote');
+    const route = this.selectRoute ? this.selectRoute() : (this.localEngine ? 'local' : 'remote');
     if (route !== 'local' && route !== 'remote') {
       throw new Error(`Unsupported work route: ${String(route)}`);
     }
@@ -183,7 +159,8 @@ export class WorkProvider {
   }
 
   public validate(hash: string, work: string, difficulty: string): boolean {
-    return this.localEngine.validate(hash, work, difficulty);
+    if (!this.localEngine) throw new Error('No local PoW engine is configured');
+    return this.localEngine.validate(hash, work, workDifficultyToThreshold(difficulty));
   }
 
   public async generateBlockWithPoW(block: StateBlock, subtype: 'send'): Promise<SendBlockWithPoW>;

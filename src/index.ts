@@ -3,12 +3,8 @@ export { NanoAmount } from './primitives/NanoAmount.js';
 export { NOMS } from './signing/noms.js';
 export {
   WorkProvider,
-  NanoRspowEngine,
-  recommendLocalPow,
-  clearPowTuningCache,
-  WorkType,
-  workTypeToHex,
-  type WorkThreshold,
+  WorkDifficulty,
+  workDifficultyToThreshold,
   type LocalPowEngine,
   type RemotePowEngine,
   type WorkRoute,

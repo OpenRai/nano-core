@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NanoClient } from './client.js';
+import type { PowEngine } from '@openrai/nano-pow-contract';
 
 vi.mock('nano-rspow-node', () => ({
   WorkType: { Send: 'Send', Receive: 'Receive', LegacyEpoch1: 'LegacyEpoch1', Epoch1: 'Epoch1', Dev: 'Dev' },
@@ -37,6 +38,7 @@ class FakeWebSocket {
 
 describe('NanoClient endpoint observation', () => {
   const fetchMock = vi.fn();
+  const localPow: PowEngine = { name: 'test-local', generate: vi.fn(async () => '1111111111111111'), validate: vi.fn(() => true) };
 
   beforeEach(() => {
     fetchMock.mockReset();
@@ -77,7 +79,7 @@ describe('NanoClient endpoint observation', () => {
   });
 
   it('uses local work generation without activating a work endpoint', async () => {
-    const client = NanoClient.initialize();
+    const client = NanoClient.initialize({ powEngine: localPow });
     const events: string[] = [];
     client.onEndpointChange((event) => events.push(`${event.kind}:${event.status}:${event.activeUrl}`));
 
@@ -93,6 +95,7 @@ describe('NanoClient endpoint observation', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ work: '1111111111111111' }), { status: 200 }));
     const client = NanoClient.initialize({
       work: ['https://work-one.example.com', 'https://work-two.example.com'],
+      powEngine: localPow,
       workRouting: { selectRoute: () => 'remote' },
     });
 

@@ -8,6 +8,9 @@ export interface PowEngine {
   /** Human-readable identifier for audit output. */
   readonly name: string;
 
+  /** Resolve when an asynchronously loaded runtime (for example WASM) is ready. */
+  ready?(): Promise<void>;
+
   /** Generate a valid 16-character hexadecimal work nonce for a block root. */
   generate(root: string, threshold: string): Promise<string>;
 

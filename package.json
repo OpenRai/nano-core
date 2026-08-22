@@ -2,9 +2,6 @@
   "name": "@openrai/nano-core",
   "version": "3.3.0",
   "description": "Protocol engine for Nano integration ecosystem",
-  "engines": {
-    "node": ">=24"
-  },
   "repository": "https://github.com/OpenRai/nano-core",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,6 +22,14 @@
     "./transport/ws": {
       "import": "./dist/transport/ws.js",
       "types": "./dist/transport/ws.d.ts"
+    },
+    "./node": {
+      "import": "./dist/node.js",
+      "types": "./dist/node.d.ts"
+    },
+    "./web": {
+      "import": "./dist/web.js",
+      "types": "./dist/web.d.ts"
     }
   },
   "scripts": {
@@ -49,11 +54,23 @@
   "dependencies": {
     "@openrai/nano-pow-contract": "workspace:^",
     "blakejs": "^1.2.1",
-    "nano-rspow-node": "^0.12.0",
     "nanocurrency": "^2.5.0"
+  },
+  "peerDependencies": {
+    "nano-rspow-node": "^0.12.0",
+    "nano-rspow-web": ">=0.13.1 <0.16.0"
+  },
+  "peerDependenciesMeta": {
+    "nano-rspow-node": {
+      "optional": true
+    },
+    "nano-rspow-web": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "nano-rspow-node": "^0.12.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   }

@@ -3,15 +3,16 @@
   <p><b>Typed Nano primitives, transport pools, work routing, and a small self-custodial account sender.</b></p>
 </div>
 
-`@openrai/nano-core` provides the protocol-level pieces needed to integrate Nano from Node.js 24+ without rebuilding address validation, exact amounts, endpoint normalization, authenticated RPC failover, or Proof-of-Work routing. It is for applications that own their own integration policy; it does not provide browser PoW, wallet storage, confirmation tracking, or a hosted custody system.
+`@openrai/nano-core` provides the protocol-level pieces needed to integrate Nano without rebuilding address validation, exact amounts, endpoint normalization, authenticated RPC failover, or Proof-of-Work routing. It is for applications that own their integration policy; it does not provide wallet storage, confirmation tracking, or hosted custody.
 
 ## Installation
 
 ```bash
-pnpm add @openrai/nano-core
+pnpm add @openrai/nano-core nano-rspow-node
+# Browser: pnpm add @openrai/nano-core nano-rspow-web
 ```
 
-`nanocurrency` and `nano-rspow-node` are direct dependencies of this package.
+Choose one runtime facade: `/node` uses the native `nano-rspow-node` binding; `/web` uses `nano-rspow-web` (WASM/WebGPU). The root package is runtime-neutral and accepts a caller-supplied `PowEngine`.
 
 ## Quick Start
 
@@ -20,7 +21,8 @@ pnpm add @openrai/nano-core
 `hydrateWallet()` creates an in-memory signer for one seed index. `send()` submits a real Nano send block. The returned hash means the RPC accepted the block; it does not mean the block is confirmed.
 
 ```typescript
-import { NanoAddress, NanoAmount, NanoClient } from '@openrai/nano-core';
+import { NanoAddress, NanoAmount, NanoClient } from '@openrai/nano-core/node';
+// import { NanoAddress, NanoAmount, NanoClient } from '@openrai/nano-core/web';
 
 const client = NanoClient.initialize();
 const wallet = client.hydrateWallet(process.env.NANO_SEED!, { index: 0 });
@@ -67,7 +69,7 @@ console.log({ confirmedRaw: balance.balance, receivableRaw: balance.pending });
 
 ### 4. Work Routing
 
-By default, `WorkProvider.auto()` follows `nano-rspow-node`'s persisted local-work recommendation. If it selects local work, `nano-core` generates and validates work locally. If it selects remote work, configure explicit `work` endpoints or `NANO_WORK_URL`; the work pool uses the same auth and failover behavior as RPC.
+The Node facade follows `nano-rspow-node`'s persisted local-work recommendation. The web facade uses its local WASM/WebGPU engine. Both validate returned remote nonces locally. Configure explicit `work` endpoints or `NANO_WORK_URL` when your application selects remote work; the work pool uses the same auth and failover behavior as RPC.
 
 ```typescript
 const client = NanoClient.initialize({
@@ -83,17 +85,18 @@ const client = NanoClient.initialize({
 });
 ```
 
-Remote selection without a configured work endpoint fails instead of silently using a machine that was not recommended for local work. Use `WorkProvider.local()` only when the caller intentionally chooses local execution:
+Remote selection without a configured work endpoint fails instead of silently changing policy. Applications with their own work selection can inject their own engine and route:
 
 ```typescript
-import { NanoClient, WorkProvider } from '@openrai/nano-core';
+import { NanoClient, WorkProvider, type PowEngine } from '@openrai/nano-core';
 
+declare const powEngine: PowEngine;
 const client = NanoClient.initialize({
-  workProvider: WorkProvider.local({ localTimeoutMs: 60_000 }),
+  workProvider: WorkProvider.local({ localEngine: powEngine, localTimeoutMs: 60_000 }),
 });
 ```
 
-Applications such as xno-skills can supply their own route override and work URLs, then retain their own approval, custody, signing, and submission policy.
+Applications such as xno-skills, RaiFlow SDK, and nanosweeper retain their own approval, custody, signing, and submission policy. They use the root package with an injected `PowEngine`/`WorkProvider` and do not need to call `hydrateWallet()`.
 
 ### 5. Precision-Safe Primitives
 

@@ -36,7 +36,7 @@ When `NANO_RPC_URL` or `NANO_WS_URL` is unset, the corresponding built-in defaul
 
 ## Work Generation
 
-`nano-core` uses `nano-rspow-node` for local work and validation. `WorkProvider.auto()` follows the native persisted recommendation. If the selected route is remote, `NANO_WORK_URL` or `NanoClient.initialize({ work })` must provide one or more HTTP work endpoints. The client sends Nano RPC `work_generate` requests through a separate normalized work pool.
+The runtime-neutral core validates work through an injected `PowEngine`. `@openrai/nano-core/node` supplies `nano-rspow-node` and follows its persisted local-work recommendation; `@openrai/nano-core/web` supplies `nano-rspow-web`. If the selected route is remote, `NANO_WORK_URL` or `NanoClient.initialize({ work })` must provide one or more HTTP work endpoints. The client sends Nano RPC `work_generate` requests through a separate normalized work pool.
 
 There are no built-in remote work defaults. If remote work is selected and every configured endpoint fails, generation fails unless the caller explicitly enables local fallback.
 
