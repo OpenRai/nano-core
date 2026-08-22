@@ -1,0 +1,46 @@
+name: Publish Nano PoW Contract
+
+on:
+  push:
+    tags:
+      - 'nano-pow-contract-v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tag version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#nano-pow-contract-v}"
+          package_version="$(node -p \"require('./packages/nano-pow-contract/package.json').version\")"
+          test "$tag_version" = "$package_version"
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Publish contract
+        run: pnpm --filter @openrai/nano-pow-contract publish --access public --no-git-checks --provenance
