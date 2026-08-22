@@ -53,6 +53,7 @@ export interface EndpointPoolOptions {
   warn?: (message: string) => void;
   now?: () => number;
   transportPolicy?: TransportPolicy;
+  allowLegacyAuth?: boolean;
   baseDelayMs?: number;
   maxDelayMs?: number;
   onActiveEndpointChange?: (event: EndpointActivityEvent) => void;

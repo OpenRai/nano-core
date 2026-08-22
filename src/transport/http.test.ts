@@ -91,6 +91,7 @@ describe('HttpEndpointPool auth application', () => {
       urls: ['https://rpc.example.com/?api_key=secret'],
       defaults: [],
       transportPolicy: 'json-body-key',
+      allowLegacyAuth: true,
     });
 
     await pool.postJson({ action: 'account_info' });

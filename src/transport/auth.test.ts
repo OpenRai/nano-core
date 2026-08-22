@@ -16,13 +16,14 @@ describe('transport auth seam', () => {
     expect(url.toString()).toBe('https://rpc.example.com/?region=eu');
   });
 
-  it('extracts userinfo credentials and strips the password', () => {
-    const url = new URL('https://key:password@rpc.example.com');
+  it('rejects non-empty userinfo passwords', () => {
+    expect(() => extractEndpointAuth(new URL('https://key:password@rpc.example.com'), 'rpc'))
+      .toThrow('endpoint credentials must not include a password');
+  });
 
-    const auth = extractEndpointAuth(url, 'rpc');
-
-    expect(auth).toMatchObject({ type: 'api-key', value: 'key', source: 'userinfo' });
-    expect(url.toString()).toBe('https://rpc.example.com/');
+  it('rejects keys outside the RFC 6750 token grammar', () => {
+    expect(() => extractEndpointAuth(new URL('https://rpc.example.com/?api_key=not%20valid'), 'rpc'))
+      .toThrow('endpoint API key is not a valid RFC 6750 token');
   });
 
   it('applies body-only and header-only policies without leaking policy decisions', () => {

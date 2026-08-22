@@ -100,7 +100,8 @@ Behavior:
 If credentials are present in the URL:
 
 - use `username` as the API key
-- ignore empty password
+- accept an explicitly empty password only
+- reject a non-empty password
 - strip credentials from the canonical URL
 
 Example:
@@ -126,7 +127,8 @@ Default for URL userinfo:
 
 - `Authorization: Bearer <key>`
 
-Provider compatibility policies may also mirror the key into the JSON body when needed.
+ORIS-010 clients use the Bearer header. Legacy provider compatibility policies
+are outside ORIS-010 and require an explicit `allowLegacyAuth: true` opt-in.
 
 The explicit policies are applied as follows:
 
@@ -134,6 +136,8 @@ The explicit policies are applied as follows:
 - `bearer-header`: `Authorization: Bearer ...`
 - `json-body-key`: `key` in the JSON body
 - `bearer-and-json-body-key`: both the Bearer header and the JSON body key
+
+The JSON-body policies MUST NOT be used by an ORIS-010 client.
 
 ### WebSocket
 

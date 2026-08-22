@@ -1,4 +1,5 @@
 import type { EndpointAuth, EndpointKind, TransportPolicy } from './types.js';
+import { NanoTransportConfigError } from './errors.js';
 
 const API_KEY_QUERY_KEYS = ['key', 'apiKey', 'api_key'];
 
@@ -11,9 +12,14 @@ export function extractEndpointAuth(
   kind: EndpointKind,
   transportPolicy?: TransportPolicy,
 ): EndpointAuth {
+  if (url.password !== '') {
+    throw new NanoTransportConfigError('endpoint credentials must not include a password');
+  }
+
   for (const key of API_KEY_QUERY_KEYS) {
     const value = url.searchParams.get(key);
     if (value && value.trim() !== '') {
+      assertValidApiKey(value);
       url.searchParams.delete(key);
       return {
         type: 'api-key',
@@ -25,7 +31,13 @@ export function extractEndpointAuth(
   }
 
   if (url.username.trim() !== '') {
-    const value = decodeURIComponent(url.username);
+    let value: string;
+    try {
+      value = decodeURIComponent(url.username);
+    } catch {
+      throw new NanoTransportConfigError('endpoint API key is not valid percent-encoded text');
+    }
+    assertValidApiKey(value);
     url.username = '';
     url.password = '';
     return {
@@ -87,4 +99,10 @@ export function applyWebSocketAuth(url: URL, auth: EndpointAuth): URL {
 
 function defaultPolicy(_kind: EndpointKind): TransportPolicy {
   return 'bearer-header';
+}
+
+function assertValidApiKey(value: string): void {
+  if (!/^[A-Za-z0-9._~+\/-]+={0,}$/.test(value)) {
+    throw new NanoTransportConfigError('endpoint API key is not a valid RFC 6750 token');
+  }
 }

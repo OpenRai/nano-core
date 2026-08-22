@@ -163,14 +163,48 @@ describe('normalizeEndpoints', () => {
     ).toThrow(NanoTransportConfigError);
   });
 
-  it('strips userinfo password as well', () => {
-    const endpoints = normalizeEndpoints({
+  it('rejects non-empty userinfo passwords without warning the secret-bearing input', () => {
+    const warn = vi.fn();
+
+    expect(() => normalizeEndpoints({
       kind: 'rpc',
       inputs: ['https://user:pass@rpc.example.com'],
       defaults: [],
+      warn,
+    })).toThrow(NanoTransportConfigError);
+    expect(warn).toHaveBeenCalledWith(
+      'Ignoring invalid RPC endpoint: endpoint credentials must not include a password',
+    );
+    expect(warn.mock.calls.flat().join(' ')).not.toContain('user:pass@rpc.example.com');
+  });
+
+  it('requires explicit legacy opt-in for JSON-body auth policies', () => {
+    expect(() => normalizeEndpoints({
+      kind: 'rpc',
+      inputs: ['https://rpc.example.com/?api_key=mykey'],
+      defaults: [],
+      transportPolicy: 'json-body-key',
+    })).toThrow('JSON-body API-key policies are legacy compatibility modes');
+
+    const endpoints = normalizeEndpoints({
+      kind: 'rpc',
+      inputs: ['https://rpc.example.com/?api_key=mykey'],
+      defaults: [],
+      transportPolicy: 'json-body-key',
+      allowLegacyAuth: true,
     });
-    expect(endpoints[0].url.toString()).toBe('https://rpc.example.com/');
-    expect(endpoints[0].auth.value).toBe('user');
+    expect(endpoints[0].auth.policy).toBe('json-body-key');
+  });
+
+  it('does not retain credential-bearing input in normalized endpoint state', () => {
+    const endpoint = normalizeEndpoints({
+      kind: 'rpc',
+      inputs: ['https://mykey:@rpc.example.com'],
+      defaults: [],
+    })[0];
+
+    expect(endpoint.originalInput).toBe('https://rpc.example.com/');
+    expect(endpoint.originalInput).not.toContain('mykey');
   });
 
   it('handles ws kind with userinfo', () => {

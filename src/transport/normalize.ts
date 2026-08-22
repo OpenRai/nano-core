@@ -34,6 +34,7 @@ export function normalizeEndpoints(options: {
   defaults: string[];
   warn?: (message: string) => void;
   transportPolicy?: TransportPolicy;
+  allowLegacyAuth?: boolean;
 }): NormalizedEndpoint[] {
   const warn = options.warn ?? (() => {});
   const rawInputs = options.inputs && options.inputs.length > 0
@@ -54,27 +55,44 @@ export function normalizeEndpoints(options: {
     try {
       url = new URL(input);
     } catch {
-      warn(`Ignoring malformed ${options.kind.toUpperCase()} endpoint "${input}": invalid URL`);
+      warn(`Ignoring malformed ${options.kind.toUpperCase()} endpoint: invalid URL`);
       continue;
     }
 
     if (!allowed.includes(url.protocol)) {
-      warn(`Ignoring invalid ${options.kind.toUpperCase()} endpoint "${input}": expected ${allowed.join(' or ')}`);
+      warn(`Ignoring invalid ${options.kind.toUpperCase()} endpoint: expected ${allowed.join(' or ')}`);
       continue;
     }
 
     if (url.hostname.trim() === '') {
-      warn(`Ignoring invalid ${options.kind.toUpperCase()} endpoint "${input}": hostname is required`);
+      warn(`Ignoring invalid ${options.kind.toUpperCase()} endpoint: hostname is required`);
       continue;
     }
 
-    const auth = extractEndpointAuth(url, options.kind, options.transportPolicy);
+    if (
+      (options.kind === 'rpc' || options.kind === 'work') &&
+      (options.transportPolicy === 'json-body-key' || options.transportPolicy === 'bearer-and-json-body-key') &&
+      options.allowLegacyAuth !== true
+    ) {
+      throw new NanoTransportConfigError(
+        'JSON-body API-key policies are legacy compatibility modes; set allowLegacyAuth to use them',
+      );
+    }
+
+    let auth: NormalizedEndpoint['auth'];
+    try {
+      auth = extractEndpointAuth(url, options.kind, options.transportPolicy);
+    } catch (error) {
+      const reason = error instanceof NanoTransportConfigError ? error.message : 'invalid endpoint credentials';
+      warn(`Ignoring invalid ${options.kind.toUpperCase()} endpoint: ${reason}`);
+      continue;
+    }
 
     normalizePath(url);
 
     const endpoint: NormalizedEndpoint = {
       kind: options.kind,
-      originalInput: input,
+      originalInput: url.toString(),
       url,
       auth,
       auditLabel: `${url.toString()}${auth.type === 'api-key' ? ' (api-key used)' : ' (no auth)'}`,
