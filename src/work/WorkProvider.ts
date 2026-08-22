@@ -7,6 +7,7 @@ import {
   clearPowTuningCache as nativeClearPowTuningCache,
   type WorkThreshold,
 } from 'nano-rspow-node';
+import type { PowEngine } from '@openrai/nano-pow-contract';
 import {
   type BlockSubtype,
   type StateBlock,
@@ -26,11 +27,8 @@ export interface WorkGenerationTrace {
   fallbackFromRemote: boolean;
 }
 
-export interface LocalPowEngine {
-  readonly name: string;
-  generate(hash: string, difficulty: string): Promise<string>;
-  validate(hash: string, work: string, difficulty: string): boolean;
-}
+/** @deprecated Use PowEngine from @openrai/nano-pow-contract. */
+export type LocalPowEngine = PowEngine;
 
 export interface RemotePowEngine {
   readonly name: string;
@@ -58,6 +56,7 @@ const LEGACY_EPOCH_1_THRESHOLD = workTypeToHex(WORK_TYPE.LegacyEpoch1 as WorkTyp
 const DEV_THRESHOLD = workTypeToHex(WORK_TYPE.Dev as WorkType).toLowerCase();
 
 export type { WorkThreshold };
+export type { PowEngine } from '@openrai/nano-pow-contract';
 export { WorkType, workTypeToHex };
 
 export class NanoRspowEngine implements LocalPowEngine {

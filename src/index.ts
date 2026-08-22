@@ -13,6 +13,7 @@ export {
   type RemotePowEngine,
   type WorkRoute,
   type WorkProviderOptions,
+  type PowEngine,
 } from './work/WorkProvider.js';
 export { NanoWallet, type HydrateWalletOptions } from './wallet/NanoWallet.js';
 export {

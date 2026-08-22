@@ -110,7 +110,9 @@ See [transport/auth design](docs/architecture/transport-auth.md) for endpoint cr
 
 ## Release Flow
 
-This is a single-package repository. Versioning is manual; GitHub Actions publishes pushes to `main` when the package version is new.
+This pnpm workspace contains `@openrai/nano-core` and `@openrai/nano-pow-contract`. Versioning is manual. The current GitHub Actions release workflow publishes `@openrai/nano-core` when its version is new.
+
+Before publishing a nano-core version that depends on a new contract version, publish the contract first and configure its npm Trusted Publisher entry for this repository workflow.
 
 1. Run `pnpm version patch` (or the appropriate semver increment). This commits the version and creates the tag.
 2. Run `git push && git push --tags`.

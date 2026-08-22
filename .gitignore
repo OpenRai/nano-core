@@ -3,4 +3,3 @@ dist/
 .DS_Store
 .worktrees/
 tsconfig.tsbuildinfo
-pnpm-workspace.yaml

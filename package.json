@@ -28,7 +28,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm --filter @openrai/nano-pow-contract build && tsc",
     "prepare": "pnpm build",
     "test": "vitest run",
     "release": "pnpm publish --access public --no-git-checks"
@@ -47,6 +47,7 @@
     "dist"
   ],
   "dependencies": {
+    "@openrai/nano-pow-contract": "workspace:^",
     "blakejs": "^1.2.1",
     "nano-rspow-node": "^0.12.0",
     "nanocurrency": "^2.5.0"

@@ -207,6 +207,9 @@ importers:
 
   .:
     dependencies:
+      '@openrai/nano-pow-contract':
+        specifier: workspace:^
+        version: link:packages/nano-pow-contract
       blakejs:
         specifier: ^1.2.1
         version: 1.2.1
@@ -226,6 +229,8 @@ importers:
       vitest:
         specifier: ^4.1.2
         version: 4.1.7(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4))
+
+  packages/nano-pow-contract: {}
 
 packages:
 
