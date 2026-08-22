@@ -35,6 +35,7 @@ export class EndpointPool {
       ...(options.urls ? { inputs: options.urls } : {}),
       ...(options.env ? { env: options.env } : {}),
       ...(options.transportPolicy ? { transportPolicy: options.transportPolicy } : {}),
+      ...(options.allowLegacyAuth ? { allowLegacyAuth: true } : {}),
     });
 
     this.states = endpoints.map((endpoint) => ({

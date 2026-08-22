@@ -1,0 +1,32 @@
+{
+  "name": "@openrai/nano-pow-contract",
+  "version": "0.1.0",
+  "description": "Runtime-neutral Nano Proof-of-Work engine contract",
+  "repository": "https://github.com/OpenRai/nano-core",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "nano",
+    "xno",
+    "proof-of-work",
+    "types"
+  ],
+  "author": "OpenRai",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

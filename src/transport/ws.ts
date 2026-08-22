@@ -1,5 +1,6 @@
 import { EndpointPool } from './EndpointPool.js';
 import type { EndpointAuditRecord, EndpointPoolOptions, NormalizedEndpoint } from './types.js';
+import { applyWebSocketAuth } from './auth.js';
 
 export interface WsPoolOptions extends Omit<EndpointPoolOptions, 'kind'> {}
 
@@ -19,13 +20,7 @@ export class WsEndpointPool {
 
   public async connect(): Promise<WebSocket> {
     return this.pool.execute(async (endpoint: NormalizedEndpoint) => {
-      let connectUrl = endpoint.url.toString();
-
-      if (endpoint.auth.type === 'api-key') {
-        const url = new URL(connectUrl);
-        url.searchParams.set('api_key', endpoint.auth.value);
-        connectUrl = url.toString();
-      }
+      const connectUrl = applyWebSocketAuth(new URL(endpoint.url), endpoint.auth).toString();
 
       return await new Promise<WebSocket>((resolve, reject) => {
         const ws = new WebSocket(connectUrl);

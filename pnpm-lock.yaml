@@ -207,12 +207,15 @@ importers:
 
   .:
     dependencies:
+      '@openrai/nano-pow-contract':
+        specifier: workspace:^
+        version: link:packages/nano-pow-contract
       blakejs:
         specifier: ^1.2.1
         version: 1.2.1
-      nano-rspow-node:
-        specifier: ^0.12.0
-        version: 0.12.0
+      nano-rspow-web:
+        specifier: '>=0.13.1 <0.16.0'
+        version: 0.13.1
       nanocurrency:
         specifier: ^2.5.0
         version: 2.5.0
@@ -220,12 +223,17 @@ importers:
       '@types/node':
         specifier: ^24.6.0
         version: 24.12.4
+      nano-rspow-node:
+        specifier: ^0.12.0
+        version: 0.12.0
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
       vitest:
         specifier: ^4.1.2
         version: 4.1.7(@types/node@24.12.4)(vite@8.0.14(@types/node@24.12.4))
+
+  packages/nano-pow-contract: {}
 
 packages:
 
@@ -547,6 +555,9 @@ packages:
 
   nano-rspow-node@0.12.0:
     resolution: {integrity: sha512-DxQNzs95T+66jEuyaeDn5JSOhkdYMUuaudjS9VcDxO5L26jVF/lko0tCJjiZV+V704sTOBHb8qOUDbRg7+FOjw==}
+
+  nano-rspow-web@0.13.1:
+    resolution: {integrity: sha512-aCOQRv9G0QLlSzpoH3zOiSQP1O2RgsCb/XkqHD5ugX5gei9Vp5PN3no7Vmj5vxQxDhZL98YJK84tMySFQ6cO/w==}
 
   nanocurrency@2.5.0:
     resolution: {integrity: sha512-zMDlgBCML0vMGvldsZN1Np93vwiMjaBLCkOM2tXv0LNIpty8HghDMZiNRzfBPkP70oRhRU+hOpVCEpTzZK5gDQ==}
@@ -961,6 +972,8 @@ snapshots:
       nano-rspow-node-linux-arm64-gnu: 0.12.0
       nano-rspow-node-linux-x64-gnu: 0.12.0
       nano-rspow-node-win32-x64-msvc: 0.12.0
+
+  nano-rspow-web@0.13.1: {}
 
   nanocurrency@2.5.0:
     dependencies:

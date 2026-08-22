@@ -1,6 +1,6 @@
 # Transport And Auth
 
-This document defines the `@openrai/nano-core` transport and auth behavior for RPC and WebSocket endpoints.
+This document defines the Node.js transport and auth behavior for `@openrai/nano-core` RPC and WebSocket endpoints.
 
 ## Goals
 
@@ -18,6 +18,7 @@ These inputs are optional:
 
 - `NANO_RPC_URL`
 - `NANO_WS_URL`
+- `NANO_WORK_URL`
 
 When set, each is parsed as a comma-separated ordered list.
 
@@ -31,27 +32,22 @@ Rules:
 - permanently drop invalid entries with a warning
 - throw if no valid endpoints remain
 
-When unset, built-in defaults are used.
+When `NANO_RPC_URL` or `NANO_WS_URL` is unset, the corresponding built-in defaults are used. `NANO_WORK_URL` has no built-in default.
 
 ## Work Generation
 
-All Proof-of-Work is computed locally using the `nano-rspow-node` native engine. There is no remote work pool, no `NANO_WORK_URL`, and no external work server dependency.
+The runtime-neutral core validates work through an injected `PowEngine`. `@openrai/nano-core/node` supplies `nano-rspow-node` and follows its persisted local-work recommendation; `@openrai/nano-core/web` supplies `nano-rspow-web`. If the selected route is remote, `NANO_WORK_URL` or `NanoClient.initialize({ work })` must provide one or more HTTP work endpoints. The client sends Nano RPC `work_generate` requests through a separate normalized work pool.
+
+There are no built-in remote work defaults. If remote work is selected and every configured endpoint fails, generation fails unless the caller explicitly enables local fallback.
 
 ## Built-In Defaults
 
-As of May 2026, `nano-core` uses this default ordered RPC/WS endpoint set:
+`nano-core` uses this default ordered RPC/WS endpoint set:
 
 - RPC: `https://rpc.nano.to`, `https://node.somenano.com/proxy`, `https://rainstorm.city/api`, `https://nanoslo.0x.no/proxy`
 - WS: `wss://rpc.nano.to`
 
-Rationale:
-
-- `rpc.nano.to` is the primary default — fastest observed and most reliable
-- `node.somenano.com/proxy` is a strong read-oriented fallback
-- `rainstorm.city/api` is a good secondary read fallback
-- `nanoslo.0x.no/proxy` adds a useful EU option
-
-Defaults are operational policy, not protocol truth, and should be periodically re-evaluated.
+Defaults are operational policy, not protocol truth. Deployments that need stable upstream commitments should configure their own endpoint lists.
 
 ## Validation
 
@@ -100,7 +96,8 @@ Behavior:
 If credentials are present in the URL:
 
 - use `username` as the API key
-- ignore empty password
+- accept an explicitly empty password only
+- reject a non-empty password
 - strip credentials from the canonical URL
 
 Example:
@@ -126,17 +123,24 @@ Default for URL userinfo:
 
 - `Authorization: Bearer <key>`
 
-Provider compatibility policies may also mirror the key into the JSON body when needed.
+ORIS-010 clients use the Bearer header. Legacy provider compatibility policies
+are outside ORIS-010 and require an explicit `allowLegacyAuth: true` opt-in.
+
+The explicit policies are applied as follows:
+
+- `basic-header`: `Authorization: Basic ...`
+- `bearer-header`: `Authorization: Bearer ...`
+- `json-body-key`: `key` in the JSON body
+- `bearer-and-json-body-key`: both the Bearer header and the JSON body key
+
+The JSON-body policies MUST NOT be used by an ORIS-010 client.
 
 ### WebSocket
 
-Preferred:
-
-- auth through transport-supported headers
-
-Fallback:
-
-- provider-specific compatible mechanism handled inside `nano-core`
+Native WebSocket construction does not expose a portable custom-header
+constructor. `nano-core` therefore applies authenticated WebSocket endpoints
+through the provider-compatible `api_key` query parameter at connection time.
+The stored canonical URL remains secret-free.
 
 Canonical stored URLs remain secret-free in all cases.
 
@@ -154,7 +158,7 @@ Examples:
 
 ## Pooling And Failover
 
-Each transport kind has its own endpoint pool.
+Each configured transport kind has its own endpoint pool.
 
 Tracked per endpoint:
 

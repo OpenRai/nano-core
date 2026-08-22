@@ -1,123 +1,67 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearPowTuningCache, recommendLocalPow, WorkProvider } from './WorkProvider.js';
-import { WorkType, generateWork, workTypeToHex } from 'nano-rspow-node';
-vi.mock('nano-rspow-node', () => ({
-  WorkType: { Send: 'Send', Receive: 'Receive', LegacyEpoch1: 'LegacyEpoch1', Epoch1: 'Epoch1', Dev: 'Dev' },
-  generateWork: vi.fn(async () => '1111111111111111'),
-  validateWork: vi.fn(() => true),
-  recommendLocalPow: vi.fn(() => true),
-  clearPowTuningCache: vi.fn(() => true),
-  workTypeToHex: vi.fn((wt: string) => {
-    const map: Record<string, string> = {
-      Send: 'fffffff800000000',
-      Receive: 'fffffe0000000000',
-      LegacyEpoch1: 'ffffffc000000000',
-      Epoch1: 'ffffffc000000000',
-      Dev: 'fe00000000000000',
-    };
-    return map[wt] ?? map.Send;
-  }),
-}));
+import { describe, expect, it, vi } from 'vitest';
+import { WorkProvider } from './WorkProvider.js';
+import type { PowEngine } from '@openrai/nano-pow-contract';
 
-describe('WorkProvider orchestration', () => {
-  beforeEach(() => {
-    vi.mocked(generateWork).mockClear();
+const ROOT = 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789';
+
+describe('WorkProvider routing', () => {
+  const local: PowEngine = { name: 'test-local', generate: vi.fn(async () => '1111111111111111'), validate: vi.fn(() => true) };
+
+  it('uses local work when the route selects local', async () => {
+    const provider = WorkProvider.auto({ localEngine: local, selectRoute: () => 'local' });
+
+    await expect(provider.generate(ROOT, 'send')).resolves.toBe('1111111111111111');
+    expect(local.generate).toHaveBeenCalledWith(ROOT, 'fffffff800000000');
+    expect(provider.getAuditReport().lastGenerationTrace).toEqual({
+      mode: 'local',
+      backend: 'test-local',
+      fallbackFromRemote: false,
+    });
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+  it('uses the configured remote adapter when the route selects remote', async () => {
+    const remote = { name: 'test-remote', generate: vi.fn(async () => '1111111111111111') };
+    const provider = WorkProvider.auto({ localEngine: local, remoteEngine: remote, selectRoute: () => 'remote' });
+
+    await expect(provider.generate(ROOT, 'receive')).resolves.toBe('1111111111111111');
+    expect(remote.generate).toHaveBeenCalledWith(ROOT, 'fffffe0000000000');
+    expect(provider.getAuditReport().lastGenerationTrace).toEqual({
+      mode: 'remote',
+      backend: 'test-remote',
+      fallbackFromRemote: false,
+    });
   });
 
-  it('generates work locally', async () => {
-    const provider = WorkProvider.auto();
-    const work = await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffff800000000');
+  it('fails instead of silently using local work when remote work is unavailable', async () => {
+    vi.mocked(local.generate).mockClear();
+    const provider = WorkProvider.auto({ localEngine: local, selectRoute: () => 'remote' });
 
-    expect(work).toBe('1111111111111111');
-    expect(provider.getAuditReport().lastGenerationTrace).toEqual({ mode: 'local', backend: 'nano-rspow-node' });
+    await expect(provider.generate(ROOT, 'send')).rejects.toThrow('no work endpoints are configured');
+    expect(local.generate).not.toHaveBeenCalled();
   });
 
-  it('local creates an executor without probing for a route', async () => {
-    const provider = WorkProvider.local();
-
-    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffff800000000');
-
-    expect(provider.getAuditReport().executionPlan.source).toBe('default');
-    expect(provider.getAuditReport().profiler).toEqual({ mode: 'manual', cacheStrategy: 'memory' });
-  });
-
-  it('runs work probing as a single-flight async operation', async () => {
+  it('uses local work after a remote failure only when explicitly configured', async () => {
+    const remote = { name: 'test-remote', generate: vi.fn(async () => { throw new Error('remote down'); }) };
     const provider = WorkProvider.auto({
-      profiler: { mode: 'auto', cacheStrategy: 'memory' },
+      remoteEngine: remote,
+      localEngine: local,
+      selectRoute: () => 'remote',
+      onRemoteFailure: 'local',
     });
 
-    const [planA, planB] = await Promise.all([provider.probe(), provider.probe()]);
-
-    expect(planA).toEqual(planB);
-    expect(planA.source).toBe('probe');
-  });
-
-  it('probe produces a local-only plan', async () => {
-    const provider = WorkProvider.auto({
-      profiler: { mode: 'auto', cacheStrategy: 'memory' },
+    await expect(provider.generate(ROOT, 'send')).resolves.toBe('1111111111111111');
+    expect(provider.getAuditReport().lastGenerationTrace).toEqual({
+      mode: 'local',
+      backend: 'test-local',
+      fallbackFromRemote: true,
     });
-
-    const plan = await provider.probe();
-
-    expect(plan.steps).toEqual([{ kind: 'local' }]);
   });
 
-  it('exercises calibration through the probe path', async () => {
-    const provider = WorkProvider.auto({
-      profiler: { mode: 'auto', cacheStrategy: 'memory' },
-    });
+  it('rejects unknown work difficulties before dispatching work', async () => {
+    vi.mocked(local.validate).mockClear();
+    const provider = WorkProvider.local({ localEngine: local });
 
-    const profile = await provider.calibrate();
-
-    expect(profile.activeStrategy).toBe('planned');
-    expect(profile.measuredMhs).toBeGreaterThanOrEqual(0);
-    expect(provider.getAuditReport().executionPlan.source).toBe('probe');
-  });
-
-  it('cacheStrategy memory keeps probe result across multiple probes', async () => {
-    const provider = WorkProvider.auto({
-      profiler: { mode: 'auto', cacheStrategy: 'memory' },
-    });
-
-    await provider.probe();
-    const plan1 = await provider.probe();
-    const plan2 = await provider.probe();
-
-    expect(plan1).toEqual(plan2);
-    expect(vi.mocked(generateWork)).toHaveBeenCalledTimes(1);
-  });
-
-  it('maps difficulty thresholds to nano-rspow-node WorkType values', async () => {
-    const provider = WorkProvider.auto();
-    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffff800000000');
-    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fffffe0000000000');
-    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'ffffffc000000000');
-    await provider.generate('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', 'fe00000000000000');
-
-    expect(vi.mocked(generateWork).mock.calls.map((call) => call[1])).toEqual([
-      WorkType.Send,
-      WorkType.Receive,
-      WorkType.LegacyEpoch1,
-      WorkType.Dev,
-    ]);
-  });
-
-  it('exposes authoritative workTypeToHex values from nano-rspow-node', () => {
-    expect(workTypeToHex(WorkType.Send)).toBe('fffffff800000000');
-    expect(workTypeToHex(WorkType.Receive)).toBe('fffffe0000000000');
-    expect(workTypeToHex(WorkType.LegacyEpoch1)).toBe('ffffffc000000000');
-    expect(workTypeToHex(WorkType.Dev)).toBe('fe00000000000000');
-  });
-
-  it('exposes the native local-PoW recommendation through nano-core', () => {
-    expect(recommendLocalPow()).toBe(true);
-  });
-
-  it('exposes native PoW tuning-cache reset through nano-core', () => {
-    expect(clearPowTuningCache()).toBe(true);
+    await expect(provider.generate(ROOT, 'not-a-threshold')).rejects.toThrow('Unsupported Nano work difficulty');
+    expect(local.validate).not.toHaveBeenCalled();
   });
 });
