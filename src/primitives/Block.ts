@@ -1,7 +1,14 @@
 import { NanoAddress } from './NanoAddress.js';
 import { blake2b } from 'blakejs';
 
-export type BlockSubtype = 'send' | 'receive' | 'open' | 'change';
+export const BlockSubtype = {
+  Send: 'send',
+  Receive: 'receive',
+  Open: 'open',
+  Change: 'change',
+} as const;
+
+export type BlockSubtype = (typeof BlockSubtype)[keyof typeof BlockSubtype];
 
 export interface StateBlock {
   type: 'state';

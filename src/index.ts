@@ -16,7 +16,7 @@ export {
 } from './work/WorkProvider.js';
 export { NanoWallet, type HydrateWalletOptions } from './wallet/NanoWallet.js';
 export {
-  type BlockSubtype,
+  BlockSubtype,
   type StateBlock,
   type SendBlockWithPoW,
   type ReceiveBlockWithPoW,

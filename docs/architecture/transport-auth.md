@@ -1,6 +1,6 @@
 # Transport And Auth
 
-This document defines the `@openrai/nano-core` transport and auth behavior for RPC and WebSocket endpoints.
+This document defines the Node.js transport and auth behavior for `@openrai/nano-core` RPC and WebSocket endpoints.
 
 ## Goals
 

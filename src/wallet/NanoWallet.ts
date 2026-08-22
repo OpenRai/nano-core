@@ -2,7 +2,7 @@ import * as nanocurrency from 'nanocurrency';
 import type { NanoClient } from '../client.js';
 import { NanoAddress } from '../primitives/NanoAddress.js';
 import { NanoAmount } from '../primitives/NanoAmount.js';
-import { buildSendBlock, hashStateBlock, type StateBlock } from '../primitives/Block.js';
+import { BlockSubtype, buildSendBlock, hashStateBlock, type StateBlock } from '../primitives/Block.js';
 
 export interface HydrateWalletOptions {
   index?: number;
@@ -90,7 +90,7 @@ export class NanoWallet {
     const processed = await this.client.rpcPool.postJson<ProcessResponse>({
       action: 'process',
       json_block: 'true',
-      subtype: 'send',
+      subtype: BlockSubtype.Send,
       block: signedBlock,
     });
 

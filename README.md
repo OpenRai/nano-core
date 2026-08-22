@@ -3,7 +3,7 @@
   <p><b>Typed Nano primitives, transport pools, work routing, and a small self-custodial account sender.</b></p>
 </div>
 
-`@openrai/nano-core` provides the protocol-level pieces needed to integrate Nano without rebuilding address validation, exact amounts, endpoint normalization, authenticated RPC failover, or Proof-of-Work routing. It is for applications that own their own integration policy; it does not provide wallet storage, confirmation tracking, or a hosted custody system.
+`@openrai/nano-core` provides the protocol-level pieces needed to integrate Nano from Node.js 24+ without rebuilding address validation, exact amounts, endpoint normalization, authenticated RPC failover, or Proof-of-Work routing. It is for applications that own their own integration policy; it does not provide browser PoW, wallet storage, confirmation tracking, or a hosted custody system.
 
 ## Installation
 
