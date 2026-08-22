@@ -128,15 +128,19 @@ Default for URL userinfo:
 
 Provider compatibility policies may also mirror the key into the JSON body when needed.
 
+The explicit policies are applied as follows:
+
+- `basic-header`: `Authorization: Basic ...`
+- `bearer-header`: `Authorization: Bearer ...`
+- `json-body-key`: `key` in the JSON body
+- `bearer-and-json-body-key`: both the Bearer header and the JSON body key
+
 ### WebSocket
 
-Preferred:
-
-- auth through transport-supported headers
-
-Fallback:
-
-- provider-specific compatible mechanism handled inside `nano-core`
+Native WebSocket construction does not expose a portable custom-header
+constructor. `nano-core` therefore applies authenticated WebSocket endpoints
+through the provider-compatible `api_key` query parameter at connection time.
+The stored canonical URL remains secret-free.
 
 Canonical stored URLs remain secret-free in all cases.
 

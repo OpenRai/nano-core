@@ -1,5 +1,6 @@
 export { NanoTransportConfigError } from './errors.js';
 export { normalizeEndpoints } from './normalize.js';
+export { applyHttpAuth, applyWebSocketAuth, extractEndpointAuth } from './auth.js';
 export { EndpointPool } from './EndpointPool.js';
 export { HttpEndpointPool, type HttpPoolOptions } from './http.js';
 export { WsEndpointPool, type WsPoolOptions } from './ws.js';

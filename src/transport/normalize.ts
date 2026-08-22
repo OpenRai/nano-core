@@ -4,8 +4,7 @@ import type {
   NormalizedEndpoint,
   TransportPolicy,
 } from './types.js';
-
-const API_KEY_QUERY_KEYS = ['key', 'apiKey', 'api_key'];
+import { extractEndpointAuth } from './auth.js';
 
 function allowedProtocols(kind: EndpointKind): string[] {
   switch (kind) {
@@ -15,10 +14,6 @@ function allowedProtocols(kind: EndpointKind): string[] {
     case 'ws':
       return ['ws:', 'wss:'];
   }
-}
-
-function defaultPolicy(kind: EndpointKind): TransportPolicy {
-  return kind === 'ws' ? 'bearer-header' : 'bearer-header';
 }
 
 function normalizePath(url: URL): void {
@@ -73,32 +68,7 @@ export function normalizeEndpoints(options: {
       continue;
     }
 
-    let auth: NormalizedEndpoint['auth'] = { type: 'none' };
-
-    for (const key of API_KEY_QUERY_KEYS) {
-      const value = url.searchParams.get(key);
-      if (value && value.trim() !== '') {
-        auth = {
-          type: 'api-key',
-          value,
-          source: 'query',
-          policy: options.transportPolicy ?? defaultPolicy(options.kind),
-        };
-        url.searchParams.delete(key);
-        break;
-      }
-    }
-
-    if (auth.type === 'none' && url.username.trim() !== '') {
-      auth = {
-        type: 'api-key',
-        value: decodeURIComponent(url.username),
-        source: 'userinfo',
-        policy: options.transportPolicy ?? defaultPolicy(options.kind),
-      };
-      url.username = '';
-      url.password = '';
-    }
+    const auth = extractEndpointAuth(url, options.kind, options.transportPolicy);
 
     normalizePath(url);
 

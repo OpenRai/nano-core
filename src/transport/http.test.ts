@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildHeaders } from './http.js';
+import { describe, expect, it, vi } from 'vitest';
+import { buildHeaders, HttpEndpointPool } from './http.js';
 import type { NormalizedEndpoint } from './types.js';
 
 function makeEndpoint(auth: NormalizedEndpoint['auth']): NormalizedEndpoint {
@@ -36,7 +36,7 @@ describe('buildHeaders', () => {
     expect(headers['Authorization']).toBe('Bearer mykey');
   });
 
-  it('returns Bearer header for json-body-key policy', () => {
+  it('omits Authorization for json-body-key policy', () => {
     const endpoint = makeEndpoint({
       type: 'api-key',
       value: 'mykey',
@@ -44,7 +44,7 @@ describe('buildHeaders', () => {
       policy: 'json-body-key',
     });
     const headers = buildHeaders(endpoint);
-    expect(headers['Authorization']).toBe('Bearer mykey');
+    expect(headers).not.toHaveProperty('Authorization');
   });
 
   it('returns Bearer header for bearer-and-json-body-key policy', () => {
@@ -76,5 +76,28 @@ describe('buildHeaders', () => {
     const endpoint = makeEndpoint({ type: 'none' });
     const headers = buildHeaders(endpoint, { 'Content-Type': 'text/plain' });
     expect(headers['Content-Type']).toBe('text/plain');
+  });
+});
+
+describe('HttpEndpointPool auth application', () => {
+  it('applies a JSON-body policy to the actual request', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pool = new HttpEndpointPool({
+      urls: ['https://rpc.example.com/?api_key=secret'],
+      defaults: [],
+      transportPolicy: 'json-body-key',
+    });
+
+    await pool.postJson({ action: 'account_info' });
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(request.headers).toEqual({ 'Content-Type': 'application/json' });
+    expect(request.body).toBe(JSON.stringify({ action: 'account_info', key: 'secret' }));
+    vi.unstubAllGlobals();
   });
 });

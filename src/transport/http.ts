@@ -1,5 +1,6 @@
 import { EndpointPool } from './EndpointPool.js';
 import type { EndpointAuditRecord, EndpointPoolOptions, NormalizedEndpoint } from './types.js';
+import { applyHttpAuth } from './auth.js';
 
 export interface HttpPoolOptions extends Omit<EndpointPoolOptions, 'kind'> {
   kind?: 'rpc' | 'work';
@@ -7,20 +8,7 @@ export interface HttpPoolOptions extends Omit<EndpointPoolOptions, 'kind'> {
 }
 
 export function buildHeaders(endpoint: NormalizedEndpoint, extraHeaders?: Record<string, string>): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(extraHeaders ?? {}),
-  };
-
-  if (endpoint.auth.type === 'api-key') {
-    if (endpoint.auth.policy === 'basic-header') {
-      headers['Authorization'] = `Basic ${btoa(`${endpoint.auth.value}:`)}`;
-    } else {
-      headers['Authorization'] = `Bearer ${endpoint.auth.value}`;
-    }
-  }
-
-  return headers;
+  return applyHttpAuth(endpoint.auth, {}, extraHeaders).headers;
 }
 
 export class HttpEndpointPool {
@@ -41,11 +29,7 @@ export class HttpEndpointPool {
 
   public async postJson<T>(body: Record<string, unknown>, extraHeaders?: Record<string, string>): Promise<T> {
     return this.pool.execute(async (endpoint) => {
-      const payload = endpoint.auth.type === 'api-key' && endpoint.auth.policy === 'json-body-key'
-        ? { ...body, key: endpoint.auth.value }
-        : endpoint.auth.type === 'api-key' && endpoint.auth.policy === 'bearer-and-json-body-key'
-          ? { ...body, key: endpoint.auth.value }
-          : body;
+      const authApplication = applyHttpAuth(endpoint.auth, body, extraHeaders);
 
       const controller = this.timeoutMs !== null ? new AbortController() : null;
       const timer = controller && this.timeoutMs !== null
@@ -56,8 +40,8 @@ export class HttpEndpointPool {
       try {
         response = await fetch(endpoint.url, {
           method: 'POST',
-          headers: buildHeaders(endpoint, extraHeaders),
-          body: JSON.stringify(payload),
+          headers: authApplication.headers,
+          body: JSON.stringify(authApplication.payload),
           ...(controller ? { signal: controller.signal } : {}),
         });
       } finally {
