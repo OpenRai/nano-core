@@ -24,13 +24,19 @@ Target is **Node 24+**. `globalThis.btoa` and native fetch are available.
 
 The repo uses GitHub OIDC Trusted Publisher workflows that publish only from package-scoped tags. Ordinary pushes to `main` run CI and never publish.
 
+Each npm package needs a Trusted Publisher entry for `OpenRai/nano-core`. Allow `npm publish`. `@openrai/nano-core` uses `release.yml`. `@openrai/nano-pow-contract` uses `publish-pow-contract.yml`. npm matches the workflow filename, not its display name.
+
 Correct release steps:
 
-1. Bump exactly one package: `pnpm version:core patch` creates `nano-core-v<version>`; `pnpm version:pow-contract patch` creates `nano-pow-contract-v<version>`. Each commits the version bump and creates its tag atomically.
-2. Push: `git push && git push --tags`
-3. **Stop.** The matching tag workflow builds, tests, and publishes automatically.
+1. Start from a clean Git worktree.
+2. Bump exactly one package. Use `pnpm version:core patch` for `nano-core-v<version>`. Use `pnpm version:pow-contract patch` for `nano-pow-contract-v<version>`.
+3. Push `main`: `git push origin main`.
+4. Push only the created package tag.
+   - Core: `git push origin nano-core-v<version>`.
+   - Contract: `git push origin nano-pow-contract-v<version>`.
+5. **Stop.** The matching tag workflow builds, tests, and publishes automatically.
 
-The tag version must match that package's manifest, and the tagged commit must be reachable from `main`.
+The tag version must match that package's manifest. The tagged commit must be reachable from `main`. Before releasing Nano Core against a new contract version, verify it with `pnpm view @openrai/nano-pow-contract version`.
 
 ## Project Structure
 
