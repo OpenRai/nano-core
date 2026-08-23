@@ -113,10 +113,19 @@ See [transport/auth design](docs/architecture/transport-auth.md) for endpoint cr
 
 ## Release Flow
 
-This pnpm workspace contains `@openrai/nano-core` and `@openrai/nano-pow-contract`. Versioning is manual. The current GitHub Actions release workflow publishes `@openrai/nano-core` when its version is new.
+This pnpm workspace contains two independently versioned packages: `@openrai/nano-core` and `@openrai/nano-pow-contract`. A package is published only from its package-scoped tag; ordinary `main` pushes run CI and never attempt publication.
 
-Before publishing a nano-core version that depends on a new contract version, publish the contract first and configure its npm Trusted Publisher entry for this repository workflow.
+| Package | Tag | Version command | Workflow |
+| --- | --- | --- | --- |
+| `@openrai/nano-core` | `nano-core-v<version>` | `pnpm version:core patch` | `Publish Nano Core` |
+| `@openrai/nano-pow-contract` | `nano-pow-contract-v<version>` | `pnpm version:pow-contract patch` | `Publish Nano PoW Contract` |
 
-1. Run `pnpm version patch` (or the appropriate semver increment). This commits the version and creates the tag.
-2. Run `git push && git push --tags`.
-3. Stop. The release workflow builds, tests, and publishes through npm Trusted Publisher.
+The version command commits the selected package's version bump and creates its tag atomically. Choose the appropriate semver increment, push the `main` commit first, then push its tag:
+
+```bash
+git push && git push --tags
+```
+
+The tagged commit must be reachable from `main`, and its tag version must match the selected package's `package.json`. The workflow then builds, tests, and publishes through npm Trusted Publisher. Never run `pnpm publish` locally.
+
+Publish the contract before publishing a Nano Core version that depends on a new contract version. The contract normally remains unchanged and does not need a release for ordinary Nano Core releases.

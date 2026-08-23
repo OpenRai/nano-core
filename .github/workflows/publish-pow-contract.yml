@@ -15,6 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
         with:
@@ -29,12 +31,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify tag version
+      - name: Verify release source
         shell: bash
         run: |
           tag_version="${GITHUB_REF_NAME#nano-pow-contract-v}"
           package_version="$(node -p \"require('./packages/nano-pow-contract/package.json').version\")"
           test "$tag_version" = "$package_version"
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
 
       - name: Build
         run: pnpm build

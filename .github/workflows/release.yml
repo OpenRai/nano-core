@@ -1,19 +1,22 @@
-name: Release
+name: Publish Nano Core
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'nano-core-v*'
 
 permissions:
   contents: read
   id-token: write
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
         with:
@@ -28,11 +31,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify release source
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#nano-core-v}"
+          package_version="$(node -p \"require('./package.json').version\")"
+          test "$tag_version" = "$package_version"
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
       - name: Build
         run: pnpm build
 
       - name: Test
         run: pnpm test
 
-      - name: Publish package
+      - name: Publish Nano Core
         run: pnpm publish --access public --no-git-checks --provenance

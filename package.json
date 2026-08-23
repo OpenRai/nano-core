@@ -36,7 +36,8 @@
     "build": "pnpm --filter @openrai/nano-pow-contract build && tsc",
     "prepare": "pnpm build",
     "test": "vitest run",
-    "release": "pnpm publish --access public --no-git-checks"
+    "version:core": "pnpm version --tag-version-prefix nano-core-v",
+    "version:pow-contract": "pnpm --dir packages/nano-pow-contract version --tag-version-prefix nano-pow-contract-v"
   },
   "keywords": [
     "nano",

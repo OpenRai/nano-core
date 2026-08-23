@@ -20,21 +20,21 @@ Target is **Node 24+**. `globalThis.btoa` and native fetch are available.
 
 ## Release Workflow (CRITICAL)
 
-**NEVER run `pnpm release`, `npm publish`, or any local publish command.**
+**NEVER run `pnpm publish`, `npm publish`, or any local publish command.**
 
-The repo uses a GitHub OIDC Trusted Publisher workflow (`.github/workflows/release.yml`) that runs on every push to `main` and attempts to publish. It succeeds only when the package version is new.
+The repo uses GitHub OIDC Trusted Publisher workflows that publish only from package-scoped tags. Ordinary pushes to `main` run CI and never publish.
 
 Correct release steps:
 
-1. Bump version: `pnpm version patch` (commits the bump and creates the tag atomically)
+1. Bump exactly one package: `pnpm version:core patch` creates `nano-core-v<version>`; `pnpm version:pow-contract patch` creates `nano-pow-contract-v<version>`. Each commits the version bump and creates its tag atomically.
 2. Push: `git push && git push --tags`
-3. **Stop.** The Release workflow on `main` will publish automatically.
+3. **Stop.** The matching tag workflow builds, tests, and publishes automatically.
 
-Local publish attempts will fail with 404 because your token lacks OIDC Trusted Publisher permissions.
+The tag version must match that package's manifest, and the tagged commit must be reachable from `main`.
 
 ## Project Structure
 
-Single-package TypeScript library. Key directories:
+pnpm workspace with `@openrai/nano-core` at the root and `@openrai/nano-pow-contract` under `packages/`. Key directories:
 
 - `src/index.ts` — public API exports
 - `src/client.ts` — `NanoClient`, the main entrypoint
