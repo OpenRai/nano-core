@@ -1,6 +1,6 @@
 {
   "name": "@openrai/nano-pow-contract",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Runtime-neutral Nano Proof-of-Work engine contract",
   "repository": "https://github.com/OpenRai/nano-core",
   "type": "module",
