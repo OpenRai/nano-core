@@ -1,5 +1,7 @@
 node_modules/
+.pnpm-store/
 dist/
+.kilo/
 .DS_Store
 .worktrees/
 tsconfig.tsbuildinfo

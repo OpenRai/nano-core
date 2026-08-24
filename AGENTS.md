@@ -6,6 +6,10 @@ Use **pnpm** exclusively. Do not use npm, yarn, or bun.
 
 **CRITICAL NOTE:** If you encounter errors like `EBADDEVENGINES` or if a script/prompt suggests running `npm install`, it is because in this project we **always use pnpm**.
 
+If another package manager is requested, call out the conflict and use the pnpm equivalent.
+
+This root `AGENTS.md` is the canonical instruction source for all agents. Harness-specific directories such as `.kilo/` are local and must not be tracked.
+
 | Task | Command |
 |------|---------|
 | Install | `pnpm install` |
