@@ -1,5 +1,6 @@
 import blake from 'blakejs';
 import * as nanocurrency from 'nanocurrency';
+import type { HashString, PrivateKeyString, PublicKeyString, SignatureString } from '../primitives/types.js';
 
 const { blake2bHex } = blake;
 
@@ -7,12 +8,18 @@ const MAGIC_HEADER_TEXT = '\x18Nano Off-chain Message:\n';
 const MAGIC_HEADER_BYTES = new TextEncoder().encode(MAGIC_HEADER_TEXT);
 
 /**
- * Nano Off-chain Message Signing (NOMS) implementation (ORIS-001).
+ * Nano Off-chain Message Signing (NOMS) implementation (ORIS-001 standard).
+ *
+ * Provides cryptographic message attestation and signature verification using Nano's Ed25519 scheme
+ * with domain separation to prevent cross-protocol signature collisions with state blocks.
  */
 export const NOMS = {
   /**
-   * Constructs the binary payload for an off-chain message as per ORIS-001.
-   * Format: MAGIC_HEADER (25 bytes) || MESSAGE_LENGTH (4 bytes uint32be) || MESSAGE (UTF-8)
+   * Constructs the canonical binary payload for an off-chain message under ORIS-001.
+   * Binary layout: MAGIC_HEADER (25 bytes) || MESSAGE_LENGTH (4 bytes uint32 Big-Endian) || MESSAGE (UTF-8 bytes).
+   *
+   * @param message - UTF-8 string message to envelope
+   * @returns Serialized binary payload `Uint8Array`
    */
   createPayload(message: string): Uint8Array {
     const messageBytes = new TextEncoder().encode(message);
@@ -28,32 +35,41 @@ export const NOMS = {
   },
 
   /**
-   * Computes the 32-byte Blake2b hash of the NOMS payload.
+   * Computes the 32-byte Blake2b hash (64 hex characters) of a NOMS enveloped message.
+   *
+   * @param message - UTF-8 string message
+   * @returns 64-character lowercase hexadecimal hash
    */
-  hashMessage(message: string): string {
+  hashMessage(message: string): HashString {
     const payload = this.createPayload(message);
-    return blake2bHex(payload, undefined, 32);
+    return blake2bHex(payload, undefined, 32).toLowerCase() as HashString;
   },
 
   /**
-   * Signs an off-chain message using standard Nano Ed25519 behavior.
-   * @param message The UTF-8 string message to sign.
-   * @param secretKey The 32-byte private key in hexadecimal format.
-   * @returns The 64-byte signature in hexadecimal format (128 characters).
+   * Signs an off-chain UTF-8 message using a 32-byte Ed25519 private key.
+   *
+   * @param message - UTF-8 string message to sign
+   * @param secretKey - 64-character hexadecimal Ed25519 private key
+   * @returns 128-character lowercase hexadecimal Ed25519 signature
    */
-  signMessage(message: string, secretKey: string): string {
+  signMessage(message: string, secretKey: string | PrivateKeyString): SignatureString {
     const hash = this.hashMessage(message);
-    return nanocurrency.signBlock({ hash, secretKey }).toLowerCase();
+    return nanocurrency.signBlock({ hash, secretKey }).toLowerCase() as SignatureString;
   },
 
   /**
-   * Verifies an off-chain message signature against a public key.
-   * @param message The UTF-8 string message that was signed.
-   * @param signature The 64-byte signature in hexadecimal format.
-   * @param publicKey The 32-byte public key in hexadecimal format.
-   * @returns True if the signature is valid for the given message and public key.
+   * Verifies an off-chain message Ed25519 signature against an account public key.
+   *
+   * @param message - UTF-8 string message
+   * @param signature - 128-character hexadecimal Ed25519 signature
+   * @param publicKey - 64-character hexadecimal Ed25519 public key
+   * @returns True if the signature is valid for the specified message and public key
    */
-  verifyMessage(message: string, signature: string, publicKey: string): boolean {
+  verifyMessage(
+    message: string,
+    signature: string | SignatureString,
+    publicKey: string | PublicKeyString
+  ): boolean {
     const hash = this.hashMessage(message);
     return nanocurrency.verifyBlock({ hash, signature, publicKey });
   },

@@ -1,13 +1,28 @@
+/**
+ * Supported transport endpoint protocols.
+ */
 export type EndpointKind = 'rpc' | 'ws' | 'work';
 
+/**
+ * Extraction source of authentication credentials from an endpoint URI.
+ */
 export type AuthSource = 'explicit' | 'query' | 'userinfo';
 
+/**
+ * Strategy applied for transmitting API keys to Nano endpoints.
+ */
 export type TransportPolicy = 'bearer-header' | 'basic-header' | 'json-body-key' | 'bearer-and-json-body-key';
 
+/**
+ * Authentication configuration associated with a normalized endpoint.
+ */
 export type EndpointAuth =
   | { type: 'none' }
   | { type: 'api-key'; value: string; source: AuthSource; policy: TransportPolicy };
 
+/**
+ * Normalized and parsed endpoint configuration.
+ */
 export interface NormalizedEndpoint {
   kind: EndpointKind;
   originalInput: string;
@@ -16,6 +31,9 @@ export interface NormalizedEndpoint {
   auditLabel: string;
 }
 
+/**
+ * Runtime health state and failover metrics for an endpoint.
+ */
 export interface EndpointState {
   endpoint: NormalizedEndpoint;
   consecutiveFailures: number;
@@ -25,6 +43,9 @@ export interface EndpointState {
   lastLatencyMs: number | null;
 }
 
+/**
+ * Serializable health and configuration snapshot for endpoint auditing.
+ */
 export interface EndpointAuditRecord {
   kind: EndpointKind;
   url: string;
@@ -38,6 +59,9 @@ export interface EndpointAuditRecord {
   lastLatencyMs: number | null;
 }
 
+/**
+ * Emitted when an endpoint pool connects or performs failover.
+ */
 export interface EndpointActivityEvent {
   kind: EndpointKind;
   status: 'connected' | 'failover';
@@ -45,6 +69,9 @@ export interface EndpointActivityEvent {
   previousUrl?: string;
 }
 
+/**
+ * Configuration options for creating an `EndpointPool`.
+ */
 export interface EndpointPoolOptions {
   kind: EndpointKind;
   env?: string;

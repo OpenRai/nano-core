@@ -3,37 +3,55 @@ import { WsEndpointPool, type WsPoolOptions } from './transport/ws.js';
 import { WorkProvider, type PowEngine, type RemotePowEngine, type WorkRoute } from './work/WorkProvider.js';
 import type { EndpointActivityEvent, EndpointAuditRecord, EndpointKind } from './transport/types.js';
 import { NanoWallet, type HydrateWalletOptions } from './wallet/NanoWallet.js';
+import type { SeedString } from './primitives/types.js';
 
 export interface TransportFallback {
   urls: string[];
 }
 
 export const TransportFallback = {
-  of: (urls: string[]): TransportFallback => ({ urls })
+  of: (urls: string[]): TransportFallback => ({ urls }),
 };
 
+/**
+ * Initialization configuration for `NanoClient`.
+ */
 export interface NanoClientOptions {
+  /** Target network environment ('mainnet', 'testnet', or 'beta'). Defaults to 'mainnet'. */
   network?: 'mainnet' | 'testnet' | 'beta';
+  /** Fallback endpoint configuration. */
   transports?: TransportFallback;
+  /** Ordered list of RPC node endpoints. */
   rpc?: string[];
+  /** Ordered list of WebSocket endpoints. */
   ws?: string[];
+  /** Ordered list of dedicated Proof of Work generation server endpoints. */
   work?: string[];
+  /** Custom `WorkProvider` instance. Cannot be combined with `work` or `workRouting`. */
   workProvider?: WorkProvider;
-  /** A caller-supplied local engine. Runtime facades provide this automatically. */
+  /** Caller-supplied local PoW engine. Runtime facades (node / web) provide this automatically. */
   powEngine?: PowEngine;
+  /** Routing and failure policies for Proof of Work computation. */
   workRouting?: {
     selectRoute?: () => WorkRoute;
     onRemoteFailure?: 'error' | 'local';
   };
+  /** Custom warning log handler. */
   warn?: (message: string) => void;
 }
 
+/**
+ * URIs of currently connected active endpoints across transport protocols.
+ */
 export interface NanoClientActiveEndpoints {
   rpc?: string;
   ws?: string;
   work?: string;
 }
 
+/**
+ * Diagnostic audit report of transport and PoW engine configurations.
+ */
 export interface NanoClientAuditReport {
   network: 'mainnet' | 'testnet' | 'beta';
   rpc: EndpointAuditRecord[];
@@ -42,15 +60,22 @@ export interface NanoClientAuditReport {
   workProvider: ReturnType<WorkProvider['getAuditReport']>;
 }
 
+/**
+ * Primary integration client coordinating RPC communication, WebSocket subscriptions, PoW generation, and wallet hydration.
+ */
 export class NanoClient {
+  /** Configured WorkProvider instance managing local and remote PoW calculation. */
   public workProvider: WorkProvider;
+  /** Resilient HTTP connection pool for node RPC requests. */
   public rpcPool: HttpEndpointPool;
+  /** Resilient WebSocket connection pool for real-time block and confirmation streams. */
   public wsPool: WsEndpointPool;
+  /** Optional dedicated HTTP connection pool for remote PoW servers. */
   public workPool?: HttpEndpointPool;
   private options: NanoClientOptions;
   private readonly endpointListeners: Set<(event: EndpointActivityEvent) => void>;
   private readonly activeEndpoints: Partial<Record<EndpointKind, string>>;
-  
+
   private constructor(options: NanoClientOptions) {
     this.options = options;
     this.endpointListeners = new Set();
@@ -110,34 +135,53 @@ export class NanoClient {
       });
     }
 
-    const remoteEngine: RemotePowEngine | undefined = this.workPool ? {
-      name: 'rpc-work',
-      generate: async (hash, threshold) => {
-        const response = await this.workPool!.postJson<{ work: string }>({
-          action: 'work_generate',
-          hash,
-          difficulty: threshold,
-        });
-        return response.work;
-      },
-    } : undefined;
-    this.workProvider = options.workProvider ?? WorkProvider.auto({
-      ...(options.powEngine ? { localEngine: options.powEngine } : {}),
-      ...(remoteEngine ? { remoteEngine } : {}),
-      ...(options.workRouting?.selectRoute ? { selectRoute: options.workRouting.selectRoute } : {}),
-      ...(options.workRouting?.onRemoteFailure ? { onRemoteFailure: options.workRouting.onRemoteFailure } : {}),
-    });
+    const remoteEngine: RemotePowEngine | undefined = this.workPool
+      ? {
+          name: 'rpc-work',
+          generate: async (hash, threshold) => {
+            const response = await this.workPool!.postJson<{ work: string }>({
+              action: 'work_generate',
+              hash,
+              difficulty: threshold,
+            });
+            return response.work;
+          },
+        }
+      : undefined;
+    this.workProvider =
+      options.workProvider ??
+      WorkProvider.auto({
+        ...(options.powEngine ? { localEngine: options.powEngine } : {}),
+        ...(remoteEngine ? { remoteEngine } : {}),
+        ...(options.workRouting?.selectRoute ? { selectRoute: options.workRouting.selectRoute } : {}),
+        ...(options.workRouting?.onRemoteFailure ? { onRemoteFailure: options.workRouting.onRemoteFailure } : {}),
+      });
   }
 
+  /**
+   * Initializes a new `NanoClient` with provided transport and PoW routing options.
+   *
+   * @param options - Transport, network, and PoW configuration options
+   * @returns Configured `NanoClient` instance
+   */
   public static initialize(options: NanoClientOptions = {}): NanoClient {
     return new NanoClient(options);
   }
 
+  /**
+   * Subscribes to endpoint status changes and failover events.
+   *
+   * @param listener - Callback invoked on connection or failover
+   * @returns Unsubscribe cleanup function
+   */
   public onEndpointChange(listener: (event: EndpointActivityEvent) => void): () => void {
     this.endpointListeners.add(listener);
     return () => this.endpointListeners.delete(listener);
   }
 
+  /**
+   * Returns active connected URLs for each configured transport protocol.
+   */
   public getActiveEndpoints(): NanoClientActiveEndpoints {
     return {
       ...(this.activeEndpoints.rpc ? { rpc: this.activeEndpoints.rpc } : {}),
@@ -147,8 +191,8 @@ export class NanoClient {
   }
 
   /**
-   * Generates a minimal JSON-serializable report of the active configuration.
-   * Useful for deploy-time auditing and startup logs to detect misconfigurations.
+   * Generates a minimal JSON-serializable report of active transport configurations and health states.
+   * Useful for deploy-time auditing and startup logs.
    */
   public getAuditReport(): NanoClientAuditReport {
     return {
@@ -160,7 +204,14 @@ export class NanoClient {
     };
   }
 
-  public hydrateWallet(seed: string, options: HydrateWalletOptions = {}): NanoWallet {
+  /**
+   * Derives and hydrates a `NanoWallet` instance bound to this client's RPC and PoW pipeline.
+   *
+   * @param seed - 64-character hexadecimal master seed
+   * @param options - Derivation index options
+   * @returns Hydrated `NanoWallet` instance
+   */
+  public hydrateWallet(seed: string | SeedString, options: HydrateWalletOptions = {}): NanoWallet {
     return NanoWallet.hydrate(this, seed, options);
   }
 }

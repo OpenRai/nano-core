@@ -4,9 +4,16 @@ import { NanoClient as CoreNanoClient, type NanoClientOptions } from './client.j
 export const createWebPowEngine = createPowEngine;
 
 /**
- * Browser convenience facade. Its PoW engine initializes WASM before first use.
+ * Web browser convenience facade for `NanoClient`.
+ * Automatically injects WebAssembly / WebGL hardware-accelerated PoW engine bindings from `nano-rspow-web`.
  */
 export const NanoClient = {
+  /**
+   * Initializes a `NanoClient` configured for web browser environments.
+   *
+   * @param options - Client initialization options
+   * @returns Configured `NanoClient` instance
+   */
   initialize(options: NanoClientOptions = {}): CoreNanoClient {
     if (options.workProvider) return CoreNanoClient.initialize(options);
     return CoreNanoClient.initialize({

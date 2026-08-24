@@ -9,12 +9,16 @@ import {
   type BlockWithPoW,
   getWorkRoot,
 } from '../primitives/Block.js';
+import type { HashString, RootString, WorkString } from '../primitives/types.js';
 
 export type WorkRoute = 'local' | 'remote';
 
 export interface WorkGenerationTrace {
+  /** Execution mode used for PoW generation. */
   mode: WorkRoute;
+  /** Name of the backend generator engine. */
   backend: string;
+  /** Indicates whether execution failed over from remote work server to local engine. */
   fallbackFromRemote: boolean;
 }
 
@@ -23,24 +27,47 @@ export type LocalPowEngine = PowEngine;
 
 export interface RemotePowEngine {
   readonly name: string;
-  generate(hash: string, difficulty: string): Promise<string>;
+  /**
+   * Requests proof-of-work generation from a remote work server.
+   *
+   * @param hash - 64-hex work root hash
+   * @param difficulty - 16-hex difficulty threshold
+   * @returns 16-hex work nonce string
+   */
+  generate(hash: string | RootString, difficulty: string): Promise<string | WorkString>;
 }
 
 export interface WorkProviderOptions {
+  /** Local CPU or GPU PoW engine. */
   localEngine?: LocalPowEngine;
+  /** Remote work server cluster client. */
   remoteEngine?: RemotePowEngine;
+  /** Maximum execution duration in milliseconds before timing out local PoW generation. */
   localTimeoutMs?: number;
+  /** Dynamic route selector function returning 'local' or 'remote'. */
   selectRoute?: () => WorkRoute;
+  /** Action on remote work generation failure ('error' throws, 'local' falls back to local engine). */
   onRemoteFailure?: 'error' | 'local';
 }
 
 const DEFAULT_LOCAL_TIMEOUT_MS = 60_000;
+
+/**
+ * Standard Nano network work difficulty thresholds.
+ *
+ * @see https://docs.nano.org/integration-guides/work-generation/#difficulty-thresholds
+ */
 export const WorkDifficulty = {
+  /** Standard send/change threshold (0xfffffff800000000). 8x receive base. */
   Send: 'send',
+  /** Standard receive/open threshold (0xfffffe0000000000). 1x base. */
   Receive: 'receive',
+  /** Legacy Epoch 1 threshold (0xffffffc000000000). */
   LegacyEpoch1: 'legacy-epoch1',
+  /** Development testnet threshold (0xfe00000000000000). */
   Dev: 'dev',
 } as const;
+
 export type WorkDifficulty = (typeof WorkDifficulty)[keyof typeof WorkDifficulty];
 
 const THRESHOLDS: Record<WorkDifficulty, string> = {
@@ -52,7 +79,13 @@ const THRESHOLDS: Record<WorkDifficulty, string> = {
 
 export type { PowEngine } from '@openrai/nano-pow-contract';
 
-/** Convert a named Nano work difficulty (or its threshold) to a threshold. */
+/**
+ * Maps a named difficulty or 16-hex threshold string to its canonical 16-hex threshold value.
+ *
+ * @param difficulty - Named difficulty ('send', 'receive', 'legacy-epoch1', 'dev') or 16-hex string
+ * @returns 16-character lowercase hexadecimal threshold string
+ * @throws {Error} If difficulty identifier is unrecognized
+ */
 export function workDifficultyToThreshold(difficulty: string): string {
   const normalized = difficulty.toLowerCase();
   if (normalized === WorkDifficulty.Send || normalized === THRESHOLDS[WorkDifficulty.Send]) return THRESHOLDS[WorkDifficulty.Send];
@@ -78,6 +111,13 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
+/**
+ * Manages Proof of Work (PoW) generation, routing, and validation.
+ *
+ * Handles intelligent fallback between local CPU/GPU generators and remote work peer servers.
+ *
+ * @see https://docs.nano.org/integration-guides/work-generation/
+ */
 export class WorkProvider {
   private readonly localTimeoutMs: number;
   private readonly localEngine: LocalPowEngine | null;
@@ -94,15 +134,27 @@ export class WorkProvider {
     this.onRemoteFailure = options.onRemoteFailure ?? 'error';
   }
 
+  /**
+   * Instantiates a `WorkProvider` with automated local/remote routing.
+   *
+   * @param options - Configuration options for engines and failure policies
+   */
   public static auto(options: WorkProviderOptions = {}): WorkProvider {
     return new WorkProvider(options);
   }
 
-  /** Create an executor that always computes work locally. */
+  /**
+   * Instantiates a `WorkProvider` configured strictly for local PoW execution.
+   *
+   * @param options - Configuration options for local engine
+   */
   public static local(options: Omit<WorkProviderOptions, 'remoteEngine' | 'selectRoute' | 'onRemoteFailure'>): WorkProvider {
     return new WorkProvider({ ...options, selectRoute: () => 'local' });
   }
 
+  /**
+   * Generates diagnostic report on configured engines and last PoW trace.
+   */
   public getAuditReport(): {
     configuredRemote: boolean;
     remoteFailurePolicy: 'error' | 'local';
@@ -115,7 +167,7 @@ export class WorkProvider {
     };
   }
 
-  private async generateLocal(hash: string, difficulty: string, fallbackFromRemote = false): Promise<string> {
+  private async generateLocal(hash: string, difficulty: string, fallbackFromRemote = false): Promise<WorkString> {
     if (!this.localEngine) throw new Error('Local work was selected but no local PoW engine is configured');
     await this.localEngine.ready?.();
     const threshold = workDifficultyToThreshold(difficulty);
@@ -124,10 +176,10 @@ export class WorkProvider {
       throw new Error('Local work generator returned invalid nonce');
     }
     this.lastGenerationTrace = { mode: 'local', backend: this.localEngine.name, fallbackFromRemote };
-    return work;
+    return work as WorkString;
   }
 
-  private async generateRemote(hash: string, difficulty: string): Promise<string> {
+  private async generateRemote(hash: string, difficulty: string): Promise<WorkString> {
     if (!this.remoteEngine) {
       throw new Error('Remote work was selected but no work endpoints are configured');
     }
@@ -140,10 +192,17 @@ export class WorkProvider {
       throw new Error('Remote work generator returned invalid nonce');
     }
     this.lastGenerationTrace = { mode: 'remote', backend: this.remoteEngine.name, fallbackFromRemote: false };
-    return work;
+    return work as WorkString;
   }
 
-  public async generate(hash: string, difficulty: string): Promise<string> {
+  /**
+   * Computes a valid PoW nonce for a 64-hex root hash and difficulty.
+   *
+   * @param hash - 64-hex work root hash
+   * @param difficulty - Named difficulty or 16-hex threshold string
+   * @returns 16-hex proof-of-work nonce
+   */
+  public async generate(hash: string | RootString, difficulty: string | WorkDifficulty): Promise<WorkString> {
     const route = this.selectRoute ? this.selectRoute() : (this.localEngine ? 'local' : 'remote');
     if (route !== 'local' && route !== 'remote') {
       throw new Error(`Unsupported work route: ${String(route)}`);
@@ -158,23 +217,31 @@ export class WorkProvider {
     }
   }
 
-  public validate(hash: string, work: string, difficulty: string): boolean {
+  /**
+   * Validates a 16-hex PoW nonce against a root hash and difficulty threshold.
+   *
+   * @param hash - 64-hex work root hash
+   * @param work - 16-hex PoW nonce
+   * @param difficulty - Named difficulty or 16-hex threshold string
+   * @returns True if nonce meets or exceeds threshold
+   */
+  public validate(hash: string | RootString, work: string | WorkString, difficulty: string | WorkDifficulty): boolean {
     if (!this.localEngine) throw new Error('No local PoW engine is configured');
     return this.localEngine.validate(hash, work, workDifficultyToThreshold(difficulty));
   }
 
   public async generateBlockWithPoW(block: StateBlock, subtype: 'send'): Promise<SendBlockWithPoW>;
   public async generateBlockWithPoW(block: StateBlock, subtype: 'receive'): Promise<ReceiveBlockWithPoW>;
-  public async generateBlockWithPoW(block: StateBlock, subtype: 'open', accountPublicKey?: string): Promise<OpenBlockWithPoW>;
+  public async generateBlockWithPoW(block: StateBlock, subtype: 'open', accountPublicKey?: string | HashString): Promise<OpenBlockWithPoW>;
   public async generateBlockWithPoW(block: StateBlock, subtype: 'change'): Promise<ChangeBlockWithPoW>;
-  public async generateBlockWithPoW(block: StateBlock, subtype: BlockSubtype, accountPublicKey?: string): Promise<BlockWithPoW> {
+  public async generateBlockWithPoW(block: StateBlock, subtype: BlockSubtype, accountPublicKey?: string | HashString): Promise<BlockWithPoW> {
     const difficulty = (subtype === 'open' || subtype === 'receive') ? 'receive' : 'send';
     const root = getWorkRoot(block, subtype, accountPublicKey);
     const work = await this.generate(root, difficulty);
     return { ...block, work } as BlockWithPoW;
   }
 
-  public validateBlockWithPoW(block: BlockWithPoW, subtype: BlockSubtype, accountPublicKey?: string): boolean {
+  public validateBlockWithPoW(block: BlockWithPoW, subtype: BlockSubtype, accountPublicKey?: string | HashString): boolean {
     const difficulty = (subtype === 'open' || subtype === 'receive') ? 'receive' : 'send';
     const root = getWorkRoot(block, subtype, accountPublicKey);
     return this.validate(root, block.work, difficulty);

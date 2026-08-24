@@ -9,10 +9,16 @@ import { NanoClient as CoreNanoClient, type NanoClientOptions } from './client.j
 export const createNodePowEngine = createPowEngine;
 
 /**
- * Node convenience facade. It supplies the native PoW engine and retains the
- * synchronous Golden Path while the protocol client remains runtime-neutral.
+ * Node.js runtime convenience facade for `NanoClient`.
+ * Automatically injects native multi-threaded CPU/GPU PoW engine bindings from `nano-rspow-node`.
  */
 export const NanoClient = {
+  /**
+   * Initializes a `NanoClient` configured with Node.js native PoW hardware acceleration.
+   *
+   * @param options - Client initialization options
+   * @returns Configured `NanoClient` instance
+   */
   initialize(options: NanoClientOptions = {}): CoreNanoClient {
     if (options.workProvider) return CoreNanoClient.initialize(options);
     return CoreNanoClient.initialize({
@@ -20,7 +26,7 @@ export const NanoClient = {
       powEngine: options.powEngine ?? createPowEngine(),
       workRouting: {
         ...options.workRouting,
-        selectRoute: options.workRouting?.selectRoute ?? (() => recommendLocalPow() ? 'local' : 'remote'),
+        selectRoute: options.workRouting?.selectRoute ?? (() => (recommendLocalPow() ? 'local' : 'remote')),
       },
     });
   },

@@ -1,5 +1,25 @@
 export { NanoAddress } from './primitives/NanoAddress.js';
 export { NanoAmount } from './primitives/NanoAmount.js';
+export {
+  type Branded,
+  type AccountString,
+  type HashString,
+  type RootString,
+  type RawAmountString,
+  type WorkString,
+  type SignatureString,
+  type PublicKeyString,
+  type SeedString,
+  type PrivateKeyString,
+  isAccountString,
+  isHashString,
+  isRootString,
+  isRawAmountString,
+  isWorkString,
+  isSignatureString,
+  isPublicKeyString,
+  isSeedString,
+} from './primitives/types.js';
 export { NOMS } from './signing/noms.js';
 export {
   WorkProvider,
@@ -31,7 +51,13 @@ export {
   hashStateBlock,
   getWorkRoot,
 } from './primitives/Block.js';
-export { NanoClient, TransportFallback, type NanoClientOptions, type NanoClientActiveEndpoints, type NanoClientAuditReport } from './client.js';
+export {
+  NanoClient,
+  TransportFallback,
+  type NanoClientOptions,
+  type NanoClientActiveEndpoints,
+  type NanoClientAuditReport,
+} from './client.js';
 export {
   EndpointPool,
   HttpEndpointPool,
