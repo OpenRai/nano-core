@@ -36,6 +36,9 @@
     "build": "pnpm --filter @openrai/nano-pow-contract build && tsc",
     "prepare": "pnpm build",
     "test": "vitest run",
+    "test:api:types": "tsc -p test/api/tsconfig.json",
+    "test:api:runtime": "node test/api/runtime.mjs",
+    "test:api": "pnpm test:api:types && pnpm test:api:runtime",
     "version:core": "pnpm version --tag-version-prefix nano-core-v",
     "version:pow-contract": "pnpm --dir packages/nano-pow-contract version --tag-version-prefix nano-pow-contract-v"
   },

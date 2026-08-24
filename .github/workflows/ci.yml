@@ -29,5 +29,8 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Verify package API
+        run: pnpm test:api
+
       - name: Test
         run: pnpm test
