@@ -61,8 +61,8 @@
     "nanocurrency": "^2.5.0"
   },
   "peerDependencies": {
-    "nano-rspow-node": "^0.16.0",
-    "nano-rspow-web": "^0.16.0"
+    "nano-rspow-node": "^0.17.0",
+    "nano-rspow-web": "^0.17.0"
   },
   "peerDependenciesMeta": {
     "nano-rspow-node": {
@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "nano-rspow-node": "^0.16.0",
+    "nano-rspow-node": "^0.17.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   }

@@ -3,7 +3,9 @@ import { NanoClient } from './client.js';
 import type { PowEngine } from '@openrai/nano-pow-contract';
 
 vi.mock('nano-rspow-node', () => ({
-  WorkType: { Send: 'Send', Receive: 'Receive', LegacyEpoch1: 'LegacyEpoch1', Epoch1: 'Epoch1', Dev: 'Dev' },
+  WorkType: { Send: 'Send', Receive: 'Receive' },
+  LegacyWorkType: { Epoch1: 'Epoch1' },
+  TestingWorkType: { Dev: 'Dev' },
   generateWork: vi.fn(async () => '1111111111111111'),
   validateWork: vi.fn(() => true),
   recommendLocalPow: vi.fn(() => true),

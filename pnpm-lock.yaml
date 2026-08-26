@@ -214,8 +214,8 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1
       nano-rspow-web:
-        specifier: ^0.16.0
-        version: 0.16.0
+        specifier: ^0.17.0
+        version: 0.17.0
       nanocurrency:
         specifier: ^2.5.0
         version: 2.5.0
@@ -224,8 +224,8 @@ importers:
         specifier: ^24.6.0
         version: 24.12.4
       nano-rspow-node:
-        specifier: ^0.16.0
-        version: 0.16.0
+        specifier: ^0.17.0
+        version: 0.17.0
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -529,39 +529,39 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  nano-rspow-node-darwin-arm64@0.16.0:
-    resolution: {integrity: sha512-rSQvJ6q4DzRIFgpC4xDCtnUj0EgACIcU1pPbT3SG16vJnpl2t09LE2XOjX3SQ/IH+MzlZHl1gt6keJzJkKv0/Q==}
+  nano-rspow-node-darwin-arm64@0.17.0:
+    resolution: {integrity: sha512-2tTglRqtnTuSgj0CRtp1O6tx8MgBfmJkqMEEEYcWCih8HW0jjMwZjQuk5DvWoTtBJ+blzJS+IwJGgFLhzjoH3w==}
     cpu: [arm64]
     os: [darwin]
 
-  nano-rspow-node-darwin-x64@0.16.0:
-    resolution: {integrity: sha512-eRFdqvLiNkwvXx/ZrkKswJBV5xipxqcDscrBnWW2B+r8zScsDlqzbHsVsTVThRqeSqebMA3XyumvdivRhfj8Xw==}
+  nano-rspow-node-darwin-x64@0.17.0:
+    resolution: {integrity: sha512-OXOwChB+PfEOerrLZQCR1W8jOhp5d1s9pwvZNh00GTJ43MgIQ4yEnjWMnjI66CQjb3PNgkenCbxuTFvXgNpXDA==}
     cpu: [x64]
     os: [darwin]
 
-  nano-rspow-node-linux-arm64-gnu@0.16.0:
-    resolution: {integrity: sha512-pZpvIfp+08VXekNsmTL6cUc/Owwttu4mC/ar/+Y2vkm1S+t9vOqIBeilP93MqOq2dUvMOqVARJtnbsXhJpX9wQ==}
+  nano-rspow-node-linux-arm64-gnu@0.17.0:
+    resolution: {integrity: sha512-Srg1pEfhOaLmf/20fbtEIiPIKIrnn66v0N/7Y/1spWQErGhH2pSwyWhFcza0QtssX7dXWxxy2pdNKUZM0NSp9A==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  nano-rspow-node-linux-x64-gnu@0.16.0:
-    resolution: {integrity: sha512-X4D2mS2di3Uam5W+Nn91ww/KqZ2M+O3WfQgG2iuYgPOWmG5vTCsLXX83G6JPKkKtl7ByMKcl977HIXAB5p3mUA==}
+  nano-rspow-node-linux-x64-gnu@0.17.0:
+    resolution: {integrity: sha512-o2QBKaiGYyRRkeJrFX+BoNMC797QGapSSYfbAekfOkg9S/3Uw0yOIa4ZKpJB3oSN3a9mW0QYrW+Wpq3L5sGdug==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  nano-rspow-node-win32-x64-msvc@0.16.0:
-    resolution: {integrity: sha512-MRhwy1D2rRp6hTnxeWghDltr3mRV31NJVybGBi+5HiUksS0uFB6tPv/D3MwFH4od4jCcbX4UjHIlAm0VJsKENQ==}
+  nano-rspow-node-win32-x64-msvc@0.17.0:
+    resolution: {integrity: sha512-2sKPG5UH0/+Gmumm7cpHTKXGzoyWn2YzorSzB9mcEb8Z+C1Yysc98qV9+J4FoG97FSRlBCRhEYgOkr11o2NGYQ==}
     cpu: [x64]
     os: [win32]
 
-  nano-rspow-node@0.16.0:
-    resolution: {integrity: sha512-3AeKgrnYbBsmckeM1dnKwBfZcStVk5OGOwn0PLu6uELSnNsY2F6Z+YhdpQ30x96XQ23nRXfET9UH0YgxeMMkbg==}
+  nano-rspow-node@0.17.0:
+    resolution: {integrity: sha512-ZeFOT4doR+YqYI//7M4YYxaGyfCUiuahFof9RTfIagjUd98onwhaN/58pN/JXjCz+YdRK/ZIMhFT/yq6QNkaXA==}
     hasBin: true
 
-  nano-rspow-web@0.16.0:
-    resolution: {integrity: sha512-zPiTsDGsMO/2UuOUwNi6xwJEbabMo6v4v9/dIfJWMT8lkJbNmgvaLTEQNFMhXRIDVgA1AH465F44xoVx/ohMNA==}
+  nano-rspow-web@0.17.0:
+    resolution: {integrity: sha512-wmJ5XkyjT87J4EU/Xf2XPYnVDpr4bEV2WOfiiSGW7XakuiTcdlnpRdO/FJ5StZa+9fUYRaZA53i102ZttPftNA==}
 
   nanocurrency@2.5.0:
     resolution: {integrity: sha512-zMDlgBCML0vMGvldsZN1Np93vwiMjaBLCkOM2tXv0LNIpty8HghDMZiNRzfBPkP70oRhRU+hOpVCEpTzZK5gDQ==}
@@ -956,32 +956,32 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  nano-rspow-node-darwin-arm64@0.16.0:
+  nano-rspow-node-darwin-arm64@0.17.0:
     optional: true
 
-  nano-rspow-node-darwin-x64@0.16.0:
+  nano-rspow-node-darwin-x64@0.17.0:
     optional: true
 
-  nano-rspow-node-linux-arm64-gnu@0.16.0:
+  nano-rspow-node-linux-arm64-gnu@0.17.0:
     optional: true
 
-  nano-rspow-node-linux-x64-gnu@0.16.0:
+  nano-rspow-node-linux-x64-gnu@0.17.0:
     optional: true
 
-  nano-rspow-node-win32-x64-msvc@0.16.0:
+  nano-rspow-node-win32-x64-msvc@0.17.0:
     optional: true
 
-  nano-rspow-node@0.16.0:
+  nano-rspow-node@0.17.0:
     dependencies:
       '@openrai/nano-pow-contract': 0.1.0
     optionalDependencies:
-      nano-rspow-node-darwin-arm64: 0.16.0
-      nano-rspow-node-darwin-x64: 0.16.0
-      nano-rspow-node-linux-arm64-gnu: 0.16.0
-      nano-rspow-node-linux-x64-gnu: 0.16.0
-      nano-rspow-node-win32-x64-msvc: 0.16.0
+      nano-rspow-node-darwin-arm64: 0.17.0
+      nano-rspow-node-darwin-x64: 0.17.0
+      nano-rspow-node-linux-arm64-gnu: 0.17.0
+      nano-rspow-node-linux-x64-gnu: 0.17.0
+      nano-rspow-node-win32-x64-msvc: 0.17.0
 
-  nano-rspow-web@0.16.0:
+  nano-rspow-web@0.17.0:
     dependencies:
       '@openrai/nano-pow-contract': 0.1.0
 
