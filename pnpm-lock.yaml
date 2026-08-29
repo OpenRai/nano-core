@@ -214,8 +214,8 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1
       nano-rspow-web:
-        specifier: ^0.17.0
-        version: 0.17.0
+        specifier: ^0.17.1
+        version: 0.17.1
       nanocurrency:
         specifier: ^2.5.0
         version: 2.5.0
@@ -560,8 +560,8 @@ packages:
     resolution: {integrity: sha512-ZeFOT4doR+YqYI//7M4YYxaGyfCUiuahFof9RTfIagjUd98onwhaN/58pN/JXjCz+YdRK/ZIMhFT/yq6QNkaXA==}
     hasBin: true
 
-  nano-rspow-web@0.17.0:
-    resolution: {integrity: sha512-wmJ5XkyjT87J4EU/Xf2XPYnVDpr4bEV2WOfiiSGW7XakuiTcdlnpRdO/FJ5StZa+9fUYRaZA53i102ZttPftNA==}
+  nano-rspow-web@0.17.1:
+    resolution: {integrity: sha512-oLkRCo4LyXf9IWw99YpcjbpKBDO0m5M95M6PDCrT2uPh9z2ZvN/H7g7s07weM5+peNeeEGrZRcdu9TSR0P6bFA==}
 
   nanocurrency@2.5.0:
     resolution: {integrity: sha512-zMDlgBCML0vMGvldsZN1Np93vwiMjaBLCkOM2tXv0LNIpty8HghDMZiNRzfBPkP70oRhRU+hOpVCEpTzZK5gDQ==}
@@ -981,7 +981,7 @@ snapshots:
       nano-rspow-node-linux-x64-gnu: 0.17.0
       nano-rspow-node-win32-x64-msvc: 0.17.0
 
-  nano-rspow-web@0.17.0:
+  nano-rspow-web@0.17.1:
     dependencies:
       '@openrai/nano-pow-contract': 0.1.0
 

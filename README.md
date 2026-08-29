@@ -69,7 +69,7 @@ console.log({ confirmedRaw: balance.balance, receivableRaw: balance.pending });
 
 ### 4. Work Routing
 
-The Node facade follows `nano-rspow-node`'s persisted local-work recommendation. The web facade uses its local WASM/WebGPU engine. Both validate returned remote nonces locally. Configure explicit `work` endpoints or `NANO_WORK_URL` when your application selects remote work; the work pool uses the same auth and failover behavior as RPC.
+The Node facade follows `nano-rspow-node`'s persisted local-work recommendation. The web facade exposes asynchronous `recommendLocalPow(reprobe?)` over its local WASM/WebGPU engine; pass `true` to force a fresh browser capability evaluation. Both validate returned remote nonces locally. Configure explicit `work` endpoints or `NANO_WORK_URL` when your application selects remote work; the work pool uses the same auth and failover behavior as RPC.
 
 ```typescript
 const client = NanoClient.initialize({

@@ -1,7 +1,15 @@
-import { createPowEngine } from 'nano-rspow-web';
+import { createPowEngine, recommendLocalPow as recommendBrowserLocalPow } from 'nano-rspow-web';
 import { NanoClient as CoreNanoClient, type NanoClientOptions } from './client.js';
 
 export const createWebPowEngine = createPowEngine;
+
+/**
+ * Return whether the browser's local WASM/WebGPU PoW path is recommended.
+ *
+ * The underlying recommendation is cached. Pass `true` to force a fresh
+ * browser capability and performance probe.
+ */
+export const recommendLocalPow = recommendBrowserLocalPow;
 
 /**
  * Web browser convenience facade for `NanoClient`.

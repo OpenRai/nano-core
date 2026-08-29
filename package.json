@@ -62,7 +62,7 @@
   },
   "peerDependencies": {
     "nano-rspow-node": "^0.17.0",
-    "nano-rspow-web": "^0.17.0"
+    "nano-rspow-web": "^0.17.1"
   },
   "peerDependenciesMeta": {
     "nano-rspow-node": {
