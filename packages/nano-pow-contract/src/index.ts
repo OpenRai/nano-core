@@ -17,3 +17,10 @@ export interface PowEngine {
   /** Validate a work nonce against a block root and threshold. */
   validate(root: string, work: string, threshold: string): boolean;
 }
+
+export {
+  WorkDifficulty,
+  SmokeTestDifficulty,
+  workDifficultyToThreshold,
+  type NamedWorkDifficulty,
+} from './difficulty.js';
