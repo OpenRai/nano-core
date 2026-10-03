@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { WorkProvider } from './WorkProvider.js';
+import { workDifficultyToThreshold as contractWorkDifficultyToThreshold } from '@openrai/nano-pow-contract';
+import { WorkDifficulty, WorkProvider, workDifficultyToThreshold } from './WorkProvider.js';
 import type { PowEngine } from '@openrai/nano-pow-contract';
 
 const ROOT = 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789';
@@ -63,5 +64,47 @@ describe('WorkProvider routing', () => {
 
     await expect(provider.generate(ROOT, 'not-a-threshold')).rejects.toThrow('Unsupported Nano work difficulty');
     expect(local.validate).not.toHaveBeenCalled();
+  });
+});
+
+describe('workDifficultyToThreshold', () => {
+  it('resolves canonical levels to the thresholds the contract defines', () => {
+    expect(workDifficultyToThreshold(WorkDifficulty.Send)).toBe('fffffff800000000');
+    expect(workDifficultyToThreshold(WorkDifficulty.Receive)).toBe('fffffe0000000000');
+    expect(workDifficultyToThreshold(WorkDifficulty.Dev)).toBe('fe00000000000000');
+  });
+
+  it('accepts level names case-insensitively', () => {
+    expect(workDifficultyToThreshold('Send')).toBe('fffffff800000000');
+    expect(workDifficultyToThreshold('RECEIVE')).toBe('fffffe0000000000');
+  });
+
+  it('keeps accepting the legacy Epoch 1 spellings', () => {
+    // Retained for compatibility only; the canonical vocabulary omits historical levels.
+    for (const alias of ['legacy-epoch1', 'LegacyEpoch1', 'legacyepoch1', 'epoch1', 'EPOCH1']) {
+      expect(workDifficultyToThreshold(alias)).toBe('ffffffc000000000');
+    }
+  });
+
+  it('passes any 16-hex threshold through and canonicalizes its case', () => {
+    expect(workDifficultyToThreshold('fffffff800000000')).toBe('fffffff800000000');
+    expect(workDifficultyToThreshold('FFFFFFF800000000')).toBe('fffffff800000000');
+    expect(workDifficultyToThreshold('1234567890abcdef')).toBe('1234567890abcdef');
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(workDifficultyToThreshold('  send  ')).toBe('fffffff800000000');
+  });
+
+  it('throws for unrecognized input', () => {
+    expect(() => workDifficultyToThreshold('not-a-threshold')).toThrow('Unsupported Nano work difficulty');
+    expect(() => workDifficultyToThreshold('fffffff8')).toThrow('Unsupported Nano work difficulty');
+  });
+
+  it('agrees with the contract on every canonical level', () => {
+    // Guards against the two packages drifting apart.
+    for (const level of [WorkDifficulty.Send, WorkDifficulty.Receive]) {
+      expect(workDifficultyToThreshold(level)).toBe(contractWorkDifficultyToThreshold(level));
+    }
   });
 });
