@@ -98,6 +98,22 @@ const client = NanoClient.initialize({
 
 Applications such as xno-skills, RaiFlow SDK, and nanosweeper retain their own approval, custody, signing, and submission policy. They use the root package with an injected `PowEngine`/`WorkProvider` and do not need to call `hydrateWallet()`.
 
+#### Naming a difficulty
+
+`WorkProvider` accepts either a named level or a threshold you already hold as hex. `workDifficultyToThreshold` is the seam between the two:
+
+```typescript
+import { WorkDifficulty, workDifficultyToThreshold } from '@openrai/nano-core';
+
+WorkDifficulty.Send;                          // 'send'
+workDifficultyToThreshold(WorkDifficulty.Send); // 'fffffff800000000'
+workDifficultyToThreshold('fffffff800000000'); // same — hex passes through
+```
+
+Canonical levels are owned by [`@openrai/nano-pow-contract`](./packages/nano-pow-contract/README.md) and resolved here, so this package and the engines cannot disagree about what a threshold is. Names are case-insensitive and surrounding whitespace is tolerated.
+
+`PowEngine` stays deliberately in hex. Engines are runtime-neutral and should not need to know the network's vocabulary, which is why naming happens one layer up in the provider. For that reason `workTypeToHex` is deprecated: it takes `nano-rspow-node`'s `WorkType`, which ties the difficulty vocabulary to one engine binding. It still works, and remains the right choice for the engine-specific `LegacyWorkType` / `TestingWorkType` presets.
+
 ### 5. Precision-Safe Primitives
 
 `NanoAddress.parse()` verifies address checksums. `NanoAmount` accepts exact decimal strings and stores Nano values as raw integers without floating-point conversion.

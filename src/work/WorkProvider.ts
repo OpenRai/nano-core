@@ -1,3 +1,4 @@
+import { workDifficultyToThreshold as resolveCanonicalDifficulty } from '@openrai/nano-pow-contract';
 import type { PowEngine } from '@openrai/nano-pow-contract';
 import {
   type BlockSubtype,
@@ -62,7 +63,14 @@ export const WorkDifficulty = {
   Send: 'send',
   /** Standard receive/open threshold (0xfffffe0000000000). 1x base. */
   Receive: 'receive',
-  /** Legacy Epoch 1 threshold (0xffffffc000000000). */
+  /**
+   * Legacy Epoch 1 threshold (0xffffffc000000000).
+   *
+   * Not part of the canonical vocabulary in `@openrai/nano-pow-contract` and retained
+   * here only for compatibility. A node serves a block by hash and the block carries
+   * its own work, so nothing on the network needs to be *named* Epoch 1 — hold the hex
+   * instead, which {@link workDifficultyToThreshold} accepts directly.
+   */
   LegacyEpoch1: 'legacy-epoch1',
   /** Development testnet threshold (0xfe00000000000000). */
   Dev: 'dev',
@@ -70,29 +78,37 @@ export const WorkDifficulty = {
 
 export type WorkDifficulty = (typeof WorkDifficulty)[keyof typeof WorkDifficulty];
 
-const THRESHOLDS: Record<WorkDifficulty, string> = {
-  [WorkDifficulty.Send]: 'fffffff800000000',
-  [WorkDifficulty.Receive]: 'fffffe0000000000',
-  [WorkDifficulty.LegacyEpoch1]: 'ffffffc000000000',
-  [WorkDifficulty.Dev]: 'fe00000000000000',
-};
+/**
+ * Epoch 1 threshold, kept locally because it is deliberately absent from the canonical
+ * vocabulary. See the note on {@link WorkDifficulty.LegacyEpoch1}.
+ */
+const LEGACY_EPOCH1_THRESHOLD = 'ffffffc000000000';
+
+/**
+ * Spellings of the Epoch 1 threshold accepted for backwards compatibility, including
+ * the un-hyphenated forms that predate the canonical vocabulary.
+ */
+const LEGACY_EPOCH1_ALIASES: ReadonlySet<string> = new Set(['legacyepoch1', 'legacy-epoch1', 'epoch1']);
 
 export type { PowEngine } from '@openrai/nano-pow-contract';
 
 /**
  * Maps a named difficulty or 16-hex threshold string to its canonical 16-hex threshold value.
  *
- * @param difficulty - Named difficulty ('send', 'receive', 'legacy-epoch1', 'dev') or 16-hex string
+ * Canonical network levels are resolved by `@openrai/nano-pow-contract`, so this package
+ * and its engines cannot disagree about what a threshold is.
+ *
+ * @param difficulty - Named difficulty ('send', 'receive', 'legacy-epoch1', 'dev'), or a 16-hex threshold
  * @returns 16-character lowercase hexadecimal threshold string
  * @throws {Error} If difficulty identifier is unrecognized
  */
 export function workDifficultyToThreshold(difficulty: string): string {
-  const normalized = difficulty.toLowerCase();
-  if (normalized === WorkDifficulty.Send || normalized === THRESHOLDS[WorkDifficulty.Send]) return THRESHOLDS[WorkDifficulty.Send];
-  if (normalized === WorkDifficulty.Receive || normalized === THRESHOLDS[WorkDifficulty.Receive]) return THRESHOLDS[WorkDifficulty.Receive];
-  if (normalized === 'legacyepoch1' || normalized === WorkDifficulty.LegacyEpoch1 || normalized === 'epoch1' || normalized === THRESHOLDS[WorkDifficulty.LegacyEpoch1]) return THRESHOLDS[WorkDifficulty.LegacyEpoch1];
-  if (normalized === WorkDifficulty.Dev || normalized === THRESHOLDS[WorkDifficulty.Dev]) return THRESHOLDS[WorkDifficulty.Dev];
-  throw new Error(`Unsupported Nano work difficulty: ${difficulty}`);
+  try {
+    return resolveCanonicalDifficulty(difficulty);
+  } catch {
+    if (LEGACY_EPOCH1_ALIASES.has(difficulty.trim().toLowerCase())) return LEGACY_EPOCH1_THRESHOLD;
+    throw new Error(`Unsupported Nano work difficulty: ${difficulty}`);
+  }
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
