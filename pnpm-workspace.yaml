@@ -3,3 +3,13 @@ packages:
 
 allowBuilds:
   webgpu: true
+
+minimumReleaseAgeExclude:
+  - nano-rspow-node-darwin-arm64@0.18.1
+  - nano-rspow-node-darwin-x64@0.18.1
+  - nano-rspow-node-linux-arm64-gnu@0.18.1
+  - nano-rspow-node-linux-arm64-musl@0.18.1
+  - nano-rspow-node-linux-x64-gnu@0.18.1
+  - nano-rspow-node-linux-x64-musl@0.18.1
+  - nano-rspow-node-win32-x64-msvc@0.18.1
+  - nano-rspow-node@0.18.1
